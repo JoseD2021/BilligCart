@@ -11,10 +11,13 @@ import {
 import Card from "../components/Card";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const RESTRICCIONES = ["Vegetariano", "Vegano", "Sin gluten", "Sin lactosa", "Sin frutos secos"];
 
-export default function PreferenciasScreen({ usuarioId = "demo" }) {
+export default function PreferenciasScreen() {
+  const { usuario, cerrarSesion } = useAuth();
+  const usuarioId = usuario?.id || "demo";
   const [restricciones, setRestricciones] = useState([]);
   const [presupuesto, setPresupuesto] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -92,6 +95,10 @@ export default function PreferenciasScreen({ usuarioId = "demo" }) {
           {guardando ? "Guardando..." : "Guardar preferencias"}
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.botonCerrarSesion} onPress={cerrarSesion}>
+        <Text style={styles.botonCerrarSesionTexto}>Cerrar sesión</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -131,4 +138,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   botonGuardarTexto: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  botonCerrarSesion: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  botonCerrarSesionTexto: { color: colors.warning, fontWeight: "600", fontSize: 14 },
 });

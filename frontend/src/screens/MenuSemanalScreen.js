@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-nat
 import Card from "../components/Card";
 import { colors, spacing, typography } from "../theme/theme";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -13,7 +14,9 @@ const MENU_DEMO = DIAS.map((dia, i) => ({
   calorias: 480 + i * 15,
 }));
 
-export default function MenuSemanalScreen({ usuarioId = "demo" }) {
+export default function MenuSemanalScreen() {
+  const { usuario } = useAuth();
+  const usuarioId = usuario?.id || "demo";
   const [menu, setMenu] = useState(null);
   const [cargando, setCargando] = useState(true);
 

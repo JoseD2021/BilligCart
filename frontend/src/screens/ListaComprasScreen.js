@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const LISTA_DEMO = {
   presupuesto: 150000,
@@ -15,7 +16,9 @@ const LISTA_DEMO = {
   ],
 };
 
-export default function ListaComprasScreen({ usuarioId = "demo" }) {
+export default function ListaComprasScreen() {
+  const { usuario } = useAuth();
+  const usuarioId = usuario?.id || "demo";
   const [lista, setLista] = useState(null);
   const [cargando, setCargando] = useState(true);
 
