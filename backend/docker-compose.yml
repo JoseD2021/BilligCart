@@ -1,0 +1,12 @@
+services:
+  backend:
+    build:
+      context: .
+    container_name: backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app,z
+    environment:
+      - PORT=8000
+    restart: unless-stopped
