@@ -10,3 +10,27 @@ services:
     environment:
       - PORT=8000
     restart: unless-stopped
+    networks:
+        - internal_network
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    expose:
+      - 11434
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+        - internal_network
+networks:
+  internal_network:
+    driver: bridge
+
+volumes:
+  ollama:
