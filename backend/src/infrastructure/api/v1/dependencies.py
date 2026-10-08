@@ -2,15 +2,15 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from application.interfaces.auth_service import AuthService
-from application.commands.login_user import LoginUserHandler
-from application.commands.register_user import RegisterUserHandler
-from application.commands.create_menu import CreateMenuHandler
-from application.queries.get_current_menu import GetCurrentMenuHandler
-from application.queries.get_menu_by_date import GetMenuByDateHandler
-from application.commands.create_plato import CreatePlatoHandler
-from application.commands.update_plato import UpdatePlatoHandler
-from application.queries.get_plato_by_day import GetPlatoByDayHandler
-from application.commands.delete_plato import DeletePlatoHandler
+from application.commands.auth.login_user import LoginUserHandler
+from application.commands.auth.register_user import RegisterUserHandler
+from application.commands.menu.create_menu import CreateMenuHandler
+from application.queries.menu.get_current_menu import GetCurrentMenuHandler
+from application.queries.menu.get_menu_by_date import GetMenuByDateHandler
+from application.commands.plato.create_plato import CreatePlatoHandler
+from application.commands.plato.update_plato import UpdatePlatoHandler
+from application.queries.plato.get_plato_by_day import GetPlatoByDayHandler
+from application.commands.plato.delete_plato import DeletePlatoHandler
 from infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
 from domain.repositories.plato_repository import PlatoRepository
 from domain.repositories.menu_repository import MenuRepository

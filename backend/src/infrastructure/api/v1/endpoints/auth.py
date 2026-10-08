@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from application.commands.login_user import LoginUserHandler, LoginUserCommand
-from  application.interfaces.auth_service import AuthService
+from application.commands.auth.login_user import LoginUserHandler, LoginUserCommand
+from application.commands.auth.register_user import RegisterUserHandler, RegisterUserCommand
 from domain.entities.user import User
 from infrastructure.api.v1.schemas.auth import LoginBody, RegisterBody
 from infrastructure.api.v1.dependencies import (
@@ -8,9 +8,8 @@ from infrastructure.api.v1.dependencies import (
     get_login_handler,
     get_register_handler,
 )
-from application.commands.register_user import RegisterUserHandler, RegisterUserCommand
 
-router = APIRouter(prefix="/auth")
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", status_code=201)
 async def register(body: RegisterBody, handler: RegisterUserHandler = Depends(get_register_handler),):

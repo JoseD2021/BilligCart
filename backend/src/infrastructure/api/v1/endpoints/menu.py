@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 from datetime import date
 
-from application.commands.create_menu import CreateMenuCommand
-from application.queries.get_current_menu import GetCurrentMenuQuery
-from application.queries.get_menu_by_date import GetMenuByDateQuery
+from application.commands.menu.create_menu import CreateMenuCommand
+from application.queries.menu.get_current_menu import GetCurrentMenuQuery
+from application.queries.menu.get_menu_by_date import GetMenuByDateQuery
 from infrastructure.api.v1.dependencies import get_current_user, get_create_menu_handler, get_current_menu_handler, get_menu_by_date_handler
 from infrastructure.api.v1.schemas.menu import UpdateMenuBody
 

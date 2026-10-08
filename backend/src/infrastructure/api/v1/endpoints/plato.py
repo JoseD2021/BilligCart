@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 
-from application.commands.create_plato import CreatePlatoCommand
-from application.commands.update_plato import UpdatePlatoCommand
-from application.queries.get_plato_by_day import GetPlatoByDayQuery
-from application.commands.delete_plato import DeletePlatoCommand
+from application.commands.plato.create_plato import CreatePlatoCommand
+from application.commands.plato.update_plato import UpdatePlatoCommand
+from application.queries.plato.get_plato_by_day import GetPlatoByDayQuery
+from application.commands.plato.delete_plato import DeletePlatoCommand
 from infrastructure.api.v1.schemas.plato import CreatePlatoBody, UpdatePlatoBody
 from infrastructure.api.v1.dependencies import get_create_plato_handler, get_update_plato_handler, get_plato_by_day_handler, get_delete_plato_handler
 
-router = APIRouter(prefix="/plato")
+router = APIRouter(prefix="/plato", tags=["Plato"])
 
 @router.post("/create", status_code=201)
 async def create_plato(body: CreatePlatoBody, handler = Depends(get_create_plato_handler)):
