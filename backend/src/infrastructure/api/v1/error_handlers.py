@@ -20,3 +20,10 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=status,
             content={"error": type(exc).__name__, "message": exc.message},
         )
+        
+    @app.exception_handler(Exception)
+    async def handle_unexpected(request: Request, exc: Exception):
+        return JSONResponse(
+            status_code=500,
+            content={"error": "InternalError", "message": "Hubo un error inesperado en el servidor."},
+        )

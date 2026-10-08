@@ -3,7 +3,7 @@ from typing import Any
 from  application.interfaces.auth_service import AuthService, AuthSession
 from domain.entities.user import User
 from domain.errors import InvalidCredentials, EmailAlreadyRegistered, InvalidEmail, WeakPassword
-from supabase_auth.errors import AuthApiError
+from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
 
 class SupabaseAuthService(AuthService):
     def __init__(self, client: Any):
@@ -12,14 +12,14 @@ class SupabaseAuthService(AuthService):
     async def sign_up(self, email, password) -> User:
         try:
             res = await self._client.auth.sign_up({"email": email, "password": password})
+        except AuthWeakPasswordError as e:
+            raise WeakPassword(e.message) from e
         except AuthApiError as e:
             match e.code:
                 case "user_already_exists" | "email_exists":
                     raise EmailAlreadyRegistered(e.message)
                 case "email_address_invalid" | "validation_failed":
                     raise InvalidEmail(e.message)
-                case "weak_password":
-                    raise WeakPassword(e.message)
                 case _:
                     raise
         return User(id=res.user.id, email=res.user.email)
