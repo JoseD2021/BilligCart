@@ -3,19 +3,23 @@ from application.commands.login_usuario import LoginUserHandler, LoginUserComman
 from  application.interfaces.auth_service import AuthService
 from domain.entities.user import User
 from infrastructure.api.v1.schemas.auth import LoginBody, RegisterBody
-from infrastructure.api.v1.dependencies import get_auth_service, get_current_user
+from infrastructure.api.v1.dependencies import (
+    get_current_user,
+    get_login_handler,
+    get_register_handler,
+)
 from application.commands.register_user import RegisterUserHandler, RegisterUserCommand
 
 router = APIRouter(prefix="/auth")
 
 @router.post("/register", status_code=201)
-async def register(body: RegisterBody, auth: AuthService = Depends(get_auth_service)):
-    user = await RegisterUserHandler(auth).handle(RegisterUserCommand(**body.model_dump()))
+async def register(body: RegisterBody, handler: RegisterUserHandler = Depends(get_register_handler),):
+    user = await handler.handle(RegisterUserCommand(**body.model_dump()))
     return {"id": user.id, "email": user.email}
 
 @router.post("/login")
-async def login(body: LoginBody, auth: AuthService = Depends(get_auth_service)):
-    s = await LoginUserHandler(auth).handle(LoginUserCommand(**body.model_dump()))
+async def login(body: LoginBody, handler: LoginUserHandler = Depends(get_login_handler)):
+    s = await handler.handle(LoginUserCommand(**body.model_dump()))
     return {"access_token": s.access_token, "refresh_token": s.refresh_token}
 
 @router.get("/me")
