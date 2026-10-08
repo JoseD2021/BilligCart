@@ -4,6 +4,7 @@ from infrastructure.api.v1.error_handlers import register_error_handlers
 from infrastructure.api.v1.endpoints.auth import router as auth_router
 from infrastructure.api.v1.endpoints.menu import router as menu_router
 from infrastructure.api.v1.endpoints.plato import router as plato_router
+from infrastructure.api.v1.endpoints.ingrediente import router as ingrediente_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
@@ -21,3 +22,4 @@ register_error_handlers(app)
 app.include_router(auth_router, prefix=prefix)
 app.include_router(menu_router, prefix=prefix)
 app.include_router(plato_router, prefix=prefix)
+app.include_router(ingrediente_router, prefix=prefix)

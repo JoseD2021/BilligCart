@@ -11,12 +11,19 @@ from application.commands.plato.create_plato import CreatePlatoHandler
 from application.commands.plato.update_plato import UpdatePlatoHandler
 from application.queries.plato.get_plato_by_day import GetPlatoByDayHandler
 from application.commands.plato.delete_plato import DeletePlatoHandler
+from application.commands.ingrediente.create_ingrediente import CreateIngredientHandler
+from application.commands.ingrediente.delete_ingrediente import DeleteIngredientHandler
+from application.commands.ingrediente.update_ingrediente import UpdateIngredientHandler
+from application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientHandler
+from application.queries.ingrediente.get_ingrediente import GetIngredientByIdHandler
+from domain.repositories.ingrediente_repository import IngredienteRepository
 from infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
 from domain.repositories.plato_repository import PlatoRepository
 from domain.repositories.menu_repository import MenuRepository
 from infrastructure.supabase.repositories.menu_repository import SupabaseMenuRepository
 from domain.repositories.preferencias_repository import PreferenciasRepository
 from infrastructure.supabase.repositories.preferencias_repository import SupabasePreferenciasRepository
+from infrastructure.supabase.repositories.ingrediente_repository import SupabaseIngredienteRepository
 from infrastructure.supabase.auth_service import SupabaseAuthService
 from domain.errors import InvalidCredentials
 from domain.entities.user import User
@@ -99,3 +106,34 @@ def get_delete_plato_handler(
     plato: PlatoRepository = Depends(get_plato_repository),
 ) -> DeletePlatoHandler:
     return DeletePlatoHandler(plato)
+
+# -------- Ingredientes ---------
+def get_ingrediente_repository(
+    request: Request
+) -> IngredienteRepository:
+    return SupabaseIngredienteRepository(request.app.state.supabase)
+
+def get_create_ingredient_handler(
+    ingr: IngredienteRepository = Depends(get_ingrediente_repository),
+) -> CreateIngredientHandler:
+    return CreateIngredientHandler(ingr)
+
+def get_update_ingredient_handler(
+    ingr: IngredienteRepository = Depends(get_ingrediente_repository),
+) -> UpdateIngredientHandler:
+    return UpdateIngredientHandler(ingr)
+
+def get_update_fetch_ingredient_handler(
+    ingr: IngredienteRepository = Depends(get_ingrediente_repository),
+) -> UpdateFetchIngredientHandler:
+    return UpdateFetchIngredientHandler(ingr)
+
+def get_delete_ingredient_handler(
+    ingr: IngredienteRepository = Depends(get_ingrediente_repository),
+) -> DeleteIngredientHandler:
+    return DeleteIngredientHandler(ingr)
+
+def get_ingredient_by_id_handler(
+    ingr: IngredienteRepository = Depends(get_ingrediente_repository),
+) -> GetIngredientByIdHandler:
+    return GetIngredientByIdHandler(ingr)
