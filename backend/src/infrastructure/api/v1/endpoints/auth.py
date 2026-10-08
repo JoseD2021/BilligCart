@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from application.commands.login_usuario import LoginUserHandler, LoginUserCommand
+from application.commands.login_user import LoginUserHandler, LoginUserCommand
 from  application.interfaces.auth_service import AuthService
 from domain.entities.user import User
 from infrastructure.api.v1.schemas.auth import LoginBody, RegisterBody

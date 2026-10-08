@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from  application.interfaces.auth_service import AuthService
-from application.commands.login_usuario import LoginUserHandler
+from application.commands.login_user import LoginUserHandler
 from application.commands.register_user import RegisterUserHandler
 from domain.repositories.preferencias_repository import PreferenciasRepository
 from infrastructure.supabase.repositories.preferencias_repository import SupabasePreferenciasRepository
