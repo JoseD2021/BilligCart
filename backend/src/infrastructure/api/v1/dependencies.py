@@ -4,6 +4,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from  application.interfaces.auth_service import AuthService
 from application.commands.login_user import LoginUserHandler
 from application.commands.register_user import RegisterUserHandler
+from application.commands.create_menu import CreateMenuHandler
+from application.queries.get_current_menu import GetCurrentMenuHandler
+from application.queries.get_menu_by_date import GetMenuByDateHandler
+from domain.repositories.menu_repository import MenuRepository
+from infrastructure.supabase.repositories.menu_repository import SupabaseMenuRepository
 from domain.repositories.preferencias_repository import PreferenciasRepository
 from infrastructure.supabase.repositories.preferencias_repository import SupabasePreferenciasRepository
 from infrastructure.supabase.auth_service import SupabaseAuthService
@@ -11,6 +16,8 @@ from domain.errors import InvalidCredentials
 from domain.entities.user import User
 
 bearer = HTTPBearer()
+
+# ------- Auth / User -------------
 
 def get_auth_service(request: Request) -> AuthService:
     return SupabaseAuthService(request.app.state.supabase)
@@ -39,3 +46,24 @@ def get_login_handler(
     auth: AuthService = Depends(get_auth_service),
 ) -> LoginUserHandler:
     return LoginUserHandler(auth)
+
+# -------- Menu ------------
+def get_menu_repository(
+    request: Request
+) -> MenuRepository:
+    return SupabaseMenuRepository(request.app.state.supabase)
+
+def get_create_menu_handler(
+    menu: MenuRepository = Depends(get_menu_repository),
+) -> CreateMenuHandler:
+    return CreateMenuHandler(menu)
+
+def get_current_menu_handler(
+    menu: MenuRepository = Depends(get_menu_repository),
+) -> GetCurrentMenuHandler:
+    return GetCurrentMenuHandler(menu)
+
+def get_menu_by_date_handler(
+    menu: MenuRepository = Depends(get_menu_repository),
+) -> GetMenuByDateHandler:
+    return GetMenuByDateHandler(menu)
