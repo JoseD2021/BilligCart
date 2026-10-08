@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 
 from domain.repositories.menu_repository import MenuRepository
 from domain.entities.menu import Menu
@@ -6,7 +7,7 @@ from domain.entities.menu import Menu
 @dataclass(frozen=True)
 class GetMenuByDateQuery:
     user_id: str
-    week_start: str
+    week_start: date
 
 class GetMenuByDateHandler:
     def __init__(self, menu: MenuRepository):

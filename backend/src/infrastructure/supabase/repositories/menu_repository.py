@@ -40,11 +40,10 @@ class SupabaseMenuRepository(MenuRepository):
         # Lógica para actualizar el menú del usuario en Supabase
         pass
     
-    async def get_menu_by_date(self, user_id: str, date: str):
+    async def get_menu_by_date(self, user_id: str, date: datetime.date) -> Menu | None:
         # calc lunes a las 00:00
         try:
-            d = datetime.datetime.strptime(date, "%Y-%m-%d")
-            week_start = d - datetime.timedelta(days=d.weekday())
+            week_start = date - datetime.timedelta(days=date.weekday())
             week_start = week_start.strftime("%Y-%m-%d")
             
             res = (

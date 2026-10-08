@@ -8,7 +8,7 @@ from infrastructure.api.v1.dependencies import get_current_user, get_create_menu
 from infrastructure.api.v1.schemas.menu import UpdateMenuBody
 
 
-router = APIRouter(prefix="/menus")
+router = APIRouter(prefix="/menu", tags=["Menu"])
 
 
 @router.get("/current", status_code=200)
@@ -29,8 +29,7 @@ async def update_menu(body: UpdateMenuBody):
     return {"message": "Menú actualizado exitosamente"}
 
 
-@router.get("/by-date", status_code=200)
-async def get_menu_by_date(date: str = Query(date.today().strftime("%Y-%m-%d"), description="Fecha en formato YYYY-MM-DD"),
-                           current_user=Depends(get_current_user), handler=Depends(get_menu_by_date_handler)):
+@router.get("/date/{date}", status_code=200)
+async def get_menu_by_date(date: date, current_user=Depends(get_current_user), handler=Depends(get_menu_by_date_handler)):
     menu = await handler.handle(GetMenuByDateQuery(user_id=current_user.id, week_start=date))
     return menu
