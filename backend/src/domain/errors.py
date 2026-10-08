@@ -18,3 +18,6 @@ class InvalidCredentials(DomainError):
 
 class UserNotFound(DomainError):
     pass
+
+class InvalidRequestBodyError(DomainError):
+    pass

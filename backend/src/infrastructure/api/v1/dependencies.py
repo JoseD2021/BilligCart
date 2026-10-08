@@ -1,12 +1,18 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from  application.interfaces.auth_service import AuthService
+from application.interfaces.auth_service import AuthService
 from application.commands.login_user import LoginUserHandler
 from application.commands.register_user import RegisterUserHandler
 from application.commands.create_menu import CreateMenuHandler
 from application.queries.get_current_menu import GetCurrentMenuHandler
 from application.queries.get_menu_by_date import GetMenuByDateHandler
+from application.commands.create_plato import CreatePlatoHandler
+from application.commands.update_plato import UpdatePlatoHandler
+from application.queries.get_plato_by_day import GetPlatoByDayHandler
+from application.commands.delete_plato import DeletePlatoHandler
+from infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
+from domain.repositories.plato_repository import PlatoRepository
 from domain.repositories.menu_repository import MenuRepository
 from infrastructure.supabase.repositories.menu_repository import SupabaseMenuRepository
 from domain.repositories.preferencias_repository import PreferenciasRepository
@@ -67,3 +73,29 @@ def get_menu_by_date_handler(
     menu: MenuRepository = Depends(get_menu_repository),
 ) -> GetMenuByDateHandler:
     return GetMenuByDateHandler(menu)
+
+# -------- Platos ---------
+def get_plato_repository(
+    request: Request
+) -> PlatoRepository:
+    return SupabasePlatoRepository(request.app.state.supabase)
+
+def get_create_plato_handler(
+    plato: PlatoRepository = Depends(get_plato_repository),
+) -> CreatePlatoHandler:
+    return CreatePlatoHandler(plato)
+
+def get_update_plato_handler(
+    plato: PlatoRepository = Depends(get_plato_repository),
+) -> UpdatePlatoHandler:
+    return UpdatePlatoHandler(plato)
+
+def get_plato_by_day_handler(
+    plato: PlatoRepository = Depends(get_plato_repository),
+) -> GetPlatoByDayHandler:
+    return GetPlatoByDayHandler(plato)
+
+def get_delete_plato_handler(
+    plato: PlatoRepository = Depends(get_plato_repository),
+) -> DeletePlatoHandler:
+    return DeletePlatoHandler(plato)
