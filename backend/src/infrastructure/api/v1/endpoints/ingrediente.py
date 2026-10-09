@@ -5,7 +5,7 @@ from application.commands.ingrediente.delete_ingrediente import DeleteIngredient
 from application.commands.ingrediente.update_ingrediente import UpdateIngredientCommand
 from application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientCommand
 from application.queries.ingrediente.get_ingrediente import GetIngredientByIdQuery
-from infrastructure.api.v1.dependencies import get_create_ingredient_handler, get_delete_ingredient_handler, get_ingredient_by_id_handler, get_update_ingredient_handler, get_update_fetch_ingredient_handler
+from infrastructure.api.v1.dependencies import get_create_ingredient_handler, get_delete_ingredient_handler, get_get_ingredient_by_id_handler, get_update_ingredient_handler, get_update_fetch_ingredient_handler
 from infrastructure.api.v1.schemas.ingrediente import CreateIngredienteBody
 from infrastructure.api.v1.schemas.ingrediente import UpdateIngredienteBody
 from infrastructure.api.v1.schemas.ingrediente import UpdateFetchIngredienteBody
@@ -28,7 +28,7 @@ async def update_fetch_ingrediente(id: int, body: UpdateFetchIngredienteBody, ha
     return ingrediente
 
 @router.get("/get/{id}", status_code=200)
-async def get_ingrediente(id: int, handler = Depends(get_ingredient_by_id_handler)):
+async def get_ingrediente(id: int, handler = Depends(get_get_ingredient_by_id_handler)):
     ingrediente = await handler.handle(GetIngredientByIdQuery(id=id))
     return ingrediente
 

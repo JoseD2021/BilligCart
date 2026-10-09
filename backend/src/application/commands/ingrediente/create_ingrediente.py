@@ -14,5 +14,4 @@ class CreateIngredientHandler:
     async def handle(self, cmd: CreateIngredientCommand) -> Ingrediente:
         ingr = Ingrediente.default(name=cmd.name)
         
-        await self._ingr.create_ingredient(ingr)
-        return ingr
+        return await self._ingr.create_ingredient(ingr)

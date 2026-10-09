@@ -16,6 +16,15 @@ from application.commands.ingrediente.delete_ingrediente import DeleteIngredient
 from application.commands.ingrediente.update_ingrediente import UpdateIngredientHandler
 from application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientHandler
 from application.queries.ingrediente.get_ingrediente import GetIngredientByIdHandler
+from application.commands.plato_ingrediente.create_many_plato_ingrediente import CreateManyPlatoIngredienteCommandHandler
+from application.commands.plato_ingrediente.update_plato_ingrediente import UpdatePlatoIngredienteCommandHandler
+from application.commands.plato_ingrediente.delete_plato_ingrediente import DeletePlatoIngredienteHandler
+from application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import DeletePlatoIngredienteByPlatoIdHandler
+from application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import GetPlatoIngredienteByPlatoIdHandler
+from application.queries.plato_ingrediente.get_plato_ingrediente_by_id import GetPlatoIngredienteByIdHandler
+from domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
+from infrastructure.supabase.repositories.plato_ingrediente_repository import SupabasePlatoIngredienteRepository
+from application.commands.plato_ingrediente.create_plato_ingrediente import CreatePlatoIngredienteCommandHandler
 from domain.repositories.ingrediente_repository import IngredienteRepository
 from infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
 from domain.repositories.plato_repository import PlatoRepository
@@ -133,7 +142,48 @@ def get_delete_ingredient_handler(
 ) -> DeleteIngredientHandler:
     return DeleteIngredientHandler(ingr)
 
-def get_ingredient_by_id_handler(
+def get_get_ingredient_by_id_handler(
     ingr: IngredienteRepository = Depends(get_ingrediente_repository),
 ) -> GetIngredientByIdHandler:
     return GetIngredientByIdHandler(ingr)
+
+# -------- PlatoIngrediente ---------
+def get_plato_ingrediente_repository(
+    request: Request
+) -> PlatoIngredienteRepository:
+    return SupabasePlatoIngredienteRepository(request.app.state.supabase)
+
+def get_create_plato_ingrediente_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> CreatePlatoIngredienteCommandHandler:
+    return CreatePlatoIngredienteCommandHandler(pltingr)
+
+def get_create_many_plato_ingrediente_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> CreateManyPlatoIngredienteCommandHandler:
+    return CreateManyPlatoIngredienteCommandHandler(pltingr)
+
+def get_update_plato_ingrediente_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> UpdatePlatoIngredienteCommandHandler:
+    return UpdatePlatoIngredienteCommandHandler(pltingr)
+
+def get_delete_plato_ingrediente_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> "DeletePlatoIngredienteHandler":
+    return DeletePlatoIngredienteHandler(pltingr)
+
+def get_delete_plato_ingrediente_by_plato_id_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> "DeletePlatoIngredienteByPlatoIdHandler":
+    return DeletePlatoIngredienteByPlatoIdHandler(pltingr)
+
+def get_get_plato_ingrediente_by_id_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> "GetPlatoIngredienteByIdHandler":
+    return GetPlatoIngredienteByIdHandler(pltingr)
+
+def get_get_plato_ingrediente_by_plato_id_handler(
+    pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
+) -> "GetPlatoIngredienteByPlatoIdHandler":
+    return GetPlatoIngredienteByPlatoIdHandler(pltingr)

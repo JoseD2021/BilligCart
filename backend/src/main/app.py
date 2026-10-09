@@ -5,6 +5,7 @@ from infrastructure.api.v1.endpoints.auth import router as auth_router
 from infrastructure.api.v1.endpoints.menu import router as menu_router
 from infrastructure.api.v1.endpoints.plato import router as plato_router
 from infrastructure.api.v1.endpoints.ingrediente import router as ingrediente_router
+from infrastructure.api.v1.endpoints.plato_ingrediente import router as plato_ingrediente_router
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
@@ -23,3 +24,4 @@ app.include_router(auth_router, prefix=prefix)
 app.include_router(menu_router, prefix=prefix)
 app.include_router(plato_router, prefix=prefix)
 app.include_router(ingrediente_router, prefix=prefix)
+app.include_router(plato_ingrediente_router, prefix=prefix)
