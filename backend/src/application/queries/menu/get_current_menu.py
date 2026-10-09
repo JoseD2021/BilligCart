@@ -12,4 +12,4 @@ class GetCurrentMenuHandler:
         self._menu = menu
         
     def handle(self, query: GetCurrentMenuQuery) -> Menu | None:
-        return self._menu.get_current_menu(query.user_id)
+        return self._menu.get_current(query.user_id)

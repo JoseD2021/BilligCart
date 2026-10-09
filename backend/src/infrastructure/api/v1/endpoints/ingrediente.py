@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 
 from application.commands.ingrediente.create_ingrediente import CreateIngredientCommand
-from application.commands.ingrediente.delete_ingrediente import DeleteIngredientCommand
+from application.commands.ingrediente.delete_ingrediente_by_id import DeleteIngredientByIdCommand
 from application.commands.ingrediente.update_ingrediente import UpdateIngredientCommand
 from application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientCommand
-from application.queries.ingrediente.get_ingrediente import GetIngredientByIdQuery
+from application.queries.ingrediente.get_ingrediente_by_id import GetIngredientByIdQuery
 from infrastructure.api.v1.dependencies import get_create_ingredient_handler, get_delete_ingredient_handler, get_get_ingredient_by_id_handler, get_update_ingredient_handler, get_update_fetch_ingredient_handler
 from infrastructure.api.v1.schemas.ingrediente import CreateIngredienteBody
 from infrastructure.api.v1.schemas.ingrediente import UpdateIngredienteBody
@@ -34,4 +34,4 @@ async def get_ingrediente(id: int, handler = Depends(get_get_ingredient_by_id_ha
 
 @router.delete("/delete/{id}", status_code=200)
 async def delete_ingrediente(id: int, handler = Depends(get_delete_ingredient_handler)):
-    await handler.handle(DeleteIngredientCommand(id=id))
+    await handler.handle(DeleteIngredientByIdCommand(id=id))

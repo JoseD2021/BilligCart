@@ -12,7 +12,7 @@ class SupabasePlatoRepository(PlatoRepository):
     def __init__(self, client: AsyncClient):
         self._client = client
 
-    async def create_plato_for_menu(self, plato: Plato) -> Plato:
+    async def create(self, plato: Plato) -> Plato:
         payload = {
             "menu_id": plato.menu_id,
             "type": plato.type.value,
@@ -31,7 +31,7 @@ class SupabasePlatoRepository(PlatoRepository):
         
         return res.data[0]
             
-    async def update_plato(self, plato: Plato) -> Plato:
+    async def update(self, plato: Plato) -> Plato:
         self._validations(plato)
         
         res = (
@@ -52,7 +52,7 @@ class SupabasePlatoRepository(PlatoRepository):
         
         return res.data[0]
     
-    async def get_platos_day(self, menu_id: int, day: int) -> list[Plato]:
+    async def get_by_menu_day(self, menu_id: int, day: int) -> list[Plato]:
         res = (
             await self._client.table(TABLE)
             .select("*")
@@ -63,7 +63,7 @@ class SupabasePlatoRepository(PlatoRepository):
         
         return [Plato(**plato) for plato in res.data]
     
-    async def delete_plato(self, id: int) -> None:
+    async def delete_by_id(self, id: int) -> None:
         if not isinstance(id, int) or id <= 0:
             raise InvalidRequestBodyError("id must be a positive integer")
         

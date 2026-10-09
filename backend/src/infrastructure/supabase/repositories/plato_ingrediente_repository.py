@@ -54,7 +54,7 @@ class SupabasePlatoIngredienteRepository(PlatoIngredienteRepository):
         )
         return res.data[0]
     
-    async def delete(self, id: int) -> None:
+    async def delete_by_id(self, id: int) -> None:
         await self._client.table(TABLE).delete().eq("id", id).execute()
     
     async def delete_by_plato(self, plato_id: int) -> None:

@@ -24,7 +24,7 @@ class PlatoIngredienteRepository(ABC):
         """Obtiene todos los ingredientes de un plato."""
 
     @abstractmethod
-    async def delete(self, id: int) -> None:
+    async def delete_by_id(self, id: int) -> None:
         """Elimina una relación."""
 
     @abstractmethod

@@ -26,4 +26,4 @@ class UpdateIngredientHandler:
             url=None
         )
         
-        return await self._ingr.update_ingredient(ingrediente)
+        return await self._ingr.update(ingrediente)

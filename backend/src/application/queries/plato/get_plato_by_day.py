@@ -13,4 +13,4 @@ class GetPlatoByDayHandler:
         self._plato = plato
         
     def handle(self, query: GetPlatoByDayQuery) -> list[Plato]:
-        return self._plato.get_platos_day(query.menu_id, query.day)
+        return self._plato.get_by_menu_day(query.menu_id, query.day)

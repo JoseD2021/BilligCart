@@ -12,4 +12,4 @@ class DeletePlatoIngredienteHandler:
             self._plato_ingrediente = plt_ingr
 
     async def handle(self, cmd: DeletePlatoIngredienteCommand) -> None:
-        await self._plato_ingrediente.delete(cmd.id)
+        await self._plato_ingrediente.delete_by_id(cmd.id)

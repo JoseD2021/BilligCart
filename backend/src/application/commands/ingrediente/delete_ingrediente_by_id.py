@@ -4,12 +4,12 @@ from domain.repositories.ingrediente_repository import IngredienteRepository
 
 
 @dataclass(frozen=True)
-class DeleteIngredientCommand:
+class DeleteIngredientByIdCommand:
     id: int
 
 class DeleteIngredientHandler:
     def __init__(self, ingr: IngredienteRepository):
         self._ingr = ingr
 
-    async def handle(self, cmd: DeleteIngredientCommand) -> None:
-        await self._ingr.delete_ingredient(cmd.id)
+    async def handle(self, cmd: DeleteIngredientByIdCommand) -> None:
+        await self._ingr.delete_by_id(cmd.id)

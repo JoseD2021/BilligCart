@@ -12,4 +12,4 @@ class GetIngredientByIdHandler:
         self._ingr = ingr
         
     def handle(self, query: GetIngredientByIdQuery) -> Ingrediente | None:
-        return self._ingr.get_ingredient(query.id)
+        return self._ingr.get_by_id(query.id)

@@ -19,5 +19,5 @@ class CreatePlatoHandler:
     async def handle(self, cmd: CreatePlatoCommand):
         plato = Plato.default(menu_id=cmd.menu_id, type=cmd.type, name=cmd.name, day=cmd.day, description=cmd.description)
         
-        await self._plato.create_plato_for_menu(plato)
+        await self._plato.create(plato)
         return plato

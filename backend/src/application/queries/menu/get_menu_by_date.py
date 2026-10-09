@@ -14,4 +14,4 @@ class GetMenuByDateHandler:
         self._menu = menu
         
     def handle(self, query: GetMenuByDateQuery) -> Menu | None:
-        return self._menu.get_menu_by_date(query.user_id, query.week_start)
+        return self._menu.get_by_date(query.user_id, query.week_start)

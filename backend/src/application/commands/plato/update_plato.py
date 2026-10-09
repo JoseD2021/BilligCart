@@ -27,5 +27,5 @@ class UpdatePlatoHandler:
             description=cmd.description or None,
         )
         
-        await self._plato.update_plato(plato)
+        await self._plato.update(plato)
         return plato

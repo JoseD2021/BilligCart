@@ -10,7 +10,7 @@ class SupabaseIngredienteRepository(IngredienteRepository):
     def __init__(self, client: AsyncClient):
         self._client = client
 
-    async def create_ingredient(self, ingr: Ingrediente) -> Ingrediente:
+    async def create(self, ingr: Ingrediente) -> Ingrediente:
         payload = {
             "name": ingr.name,
             "last_updated": ingr.last_updated.strftime("%Y-%m-%d %H:%M:%S.%f%z"),
@@ -25,7 +25,7 @@ class SupabaseIngredienteRepository(IngredienteRepository):
         )
         return res.data[0]
     
-    async def update_ingredient(self, ingr: Ingrediente) -> Ingrediente:
+    async def update(self, ingr: Ingrediente) -> Ingrediente:
         payload = {
             "name": ingr.name,
             "last_updated": ingr.last_updated.strftime("%Y-%m-%d %H:%M:%S.%f%z")
@@ -55,7 +55,7 @@ class SupabaseIngredienteRepository(IngredienteRepository):
         )
         return res.data[0]
     
-    async def get_ingredient(self, id: int) -> Ingrediente | None:
+    async def get_by_id(self, id: int) -> Ingrediente | None:
         res = (
             await self._client.table(TABLE)
             .select("*")
@@ -65,7 +65,7 @@ class SupabaseIngredienteRepository(IngredienteRepository):
         
         return Ingrediente(**res.data[0]) if res and res.data else None
     
-    async def delete_ingredient(self, id: int) -> None:
+    async def delete_by_id(self, id: int) -> None:
         await self._client.table(TABLE).delete().eq("id", id).execute()
         
         
