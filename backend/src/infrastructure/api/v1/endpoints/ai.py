@@ -10,7 +10,7 @@ from src.infrastructure.messaging.rabbitmq_ai_client import (
 )
 
 
-ai = APIRouter()
+ai = APIRouter(prefix="/ai", tags=["AI"])
 
 
 class PromptRequest(BaseModel):

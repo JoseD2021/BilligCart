@@ -8,6 +8,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app,z
+    env_file: .env
     environment:
       PORT: 8000
       RABBITMQ_HOST: rabbitmq

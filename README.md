@@ -3,5 +3,5 @@
 ## Instrucciones
 docker compose up -d --build
 
-descarga de modelos: 
-- docker exec -it ollama ollama pull granite4.2:8b
+descarga de modelos:
+- docker exec -it ollama ollama pull gemma4:e4b
