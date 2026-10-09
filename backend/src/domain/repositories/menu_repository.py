@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import date
 
-from domain.entities.menu import Menu
+from src.domain.entities.menu import Menu
 
 class MenuRepository(ABC):
     @abstractmethod

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from domain.entities.ingrediente import IngredienteFetchInfo, Ingrediente
+from src.domain.entities.ingrediente import IngredienteFetchInfo, Ingrediente
 
 class IngredienteRepository(ABC):
     @abstractmethod

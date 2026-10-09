@@ -1,8 +1,8 @@
 from typing import Any
 
-from  application.interfaces.auth_service import AuthService, AuthSession
-from domain.entities.user import User
-from domain.errors import InvalidCredentials, EmailAlreadyRegistered, InvalidEmail, WeakPassword
+from src.application.interfaces.auth_service import AuthService, AuthSession
+from src.domain.entities.user import User
+from src.domain.errors import InvalidCredentials, EmailAlreadyRegistered, InvalidEmail, WeakPassword
 from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
 
 class SupabaseAuthService(AuthService):

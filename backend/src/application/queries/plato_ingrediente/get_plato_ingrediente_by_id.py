@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
-from domain.entities.plato import Plato
+from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
+from src.domain.entities.plato import Plato
 
 @dataclass(frozen=True)
 class GetPlatoIngredienteByIdQuery:

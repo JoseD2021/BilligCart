@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from domain.entities.preferencias import Preferencias
+from src.domain.entities.preferencias import Preferencias
 
 class PreferenciasRepository(ABC):
     @abstractmethod

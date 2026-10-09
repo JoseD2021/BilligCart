@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from domain.repositories.plato_repository import PlatoRepository
-from domain.entities.plato import Plato
+from src.domain.repositories.plato_repository import PlatoRepository
+from src.domain.entities.plato import Plato
 
 @dataclass(frozen=True)
 class GetPlatoByDayQuery:

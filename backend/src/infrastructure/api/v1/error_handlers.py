@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from postgrest import APIError
-from domain.errors import (
+from src.domain.errors import (
     DomainError, EmailAlreadyRegistered, InvalidCredentials, InvalidEmail, InvalidRequestBodyError, UserNotFound, WeakPassword,
 )
 

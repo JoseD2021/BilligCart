@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 import datetime
 
-from domain.entities.ingrediente import Ingrediente
-from domain.repositories.ingrediente_repository import IngredienteRepository
+from src.domain.entities.ingrediente import Ingrediente
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
 
 @dataclass(frozen=True)
 class UpdateIngredientCommand:

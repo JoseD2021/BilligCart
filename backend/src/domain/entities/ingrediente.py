@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import datetime
 
-from domain.enums.tienda import Tienda
+from src.domain.enums.tienda import Tienda
 
 @dataclass(frozen=True)
 class IngredienteFetchInfo:

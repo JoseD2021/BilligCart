@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from domain.repositories.menu_repository import MenuRepository
-from domain.entities.menu import Menu
+from src.domain.repositories.menu_repository import MenuRepository
+from src.domain.entities.menu import Menu
 
 @dataclass(frozen=True)
 class GetCurrentMenuQuery:

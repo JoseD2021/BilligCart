@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.repositories.plato_repository import PlatoRepository
+from src.domain.repositories.plato_repository import PlatoRepository
 
 
 @dataclass(frozen=True)

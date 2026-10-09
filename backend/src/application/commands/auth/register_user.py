@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from application.interfaces.auth_service import AuthService
-from domain.entities.preferencias import Preferencias
-from domain.entities.user import User
-from domain.repositories.preferencias_repository import PreferenciasRepository
+from src.application.interfaces.auth_service import AuthService
+from src.domain.entities.preferencias import Preferencias
+from src.domain.entities.user import User
+from src.domain.repositories.preferencias_repository import PreferenciasRepository
 
 @dataclass(frozen=True)
 class RegisterUserCommand:

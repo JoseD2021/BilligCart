@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 
-from domain.enums.tienda import Tienda
+from src.domain.enums.tienda import Tienda
 
 class CreateIngredienteBody(BaseModel):
     name: str

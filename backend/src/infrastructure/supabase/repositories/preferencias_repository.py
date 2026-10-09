@@ -2,8 +2,8 @@ from uuid import UUID
 
 from supabase import AsyncClient
 
-from domain.entities.preferencias import Preferencias
-from domain.repositories.preferencias_repository import PreferenciasRepository
+from src.domain.entities.preferencias import Preferencias
+from src.domain.repositories.preferencias_repository import PreferenciasRepository
 
 TABLE = "Preferencias"
 

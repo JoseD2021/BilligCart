@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.repositories.ingrediente_repository import IngredienteRepository
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
 
 
 @dataclass(frozen=True)

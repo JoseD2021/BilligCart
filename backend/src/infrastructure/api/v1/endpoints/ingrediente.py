@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 
-from application.commands.ingrediente.create_ingrediente import CreateIngredientCommand
-from application.commands.ingrediente.delete_ingrediente_by_id import DeleteIngredientByIdCommand
-from application.commands.ingrediente.update_ingrediente import UpdateIngredientCommand
-from application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientCommand
-from application.queries.ingrediente.get_ingrediente_by_id import GetIngredientByIdQuery
-from infrastructure.api.v1.dependencies import get_create_ingredient_handler, get_delete_ingredient_handler, get_get_ingredient_by_id_handler, get_update_ingredient_handler, get_update_fetch_ingredient_handler
-from infrastructure.api.v1.schemas.ingrediente import CreateIngredienteBody
-from infrastructure.api.v1.schemas.ingrediente import UpdateIngredienteBody
-from infrastructure.api.v1.schemas.ingrediente import UpdateFetchIngredienteBody
+from src.application.commands.ingrediente.create_ingrediente import CreateIngredientCommand
+from src.application.commands.ingrediente.delete_ingrediente_by_id import DeleteIngredientByIdCommand
+from src.application.commands.ingrediente.update_ingrediente import UpdateIngredientCommand
+from src.application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientCommand
+from src.application.queries.ingrediente.get_ingrediente_by_id import GetIngredientByIdQuery
+from src.infrastructure.api.v1.dependencies import get_create_ingredient_handler, get_delete_ingredient_handler, get_get_ingredient_by_id_handler, get_update_ingredient_handler, get_update_fetch_ingredient_handler
+from src.infrastructure.api.v1.schemas.ingrediente import CreateIngredienteBody
+from src.infrastructure.api.v1.schemas.ingrediente import UpdateIngredienteBody
+from src.infrastructure.api.v1.schemas.ingrediente import UpdateFetchIngredienteBody
 
 router = APIRouter(prefix="/ingrediente", tags=["Ingrediente"])
 

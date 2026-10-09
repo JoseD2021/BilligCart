@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Query
 
-from application.commands.plato.create_plato import CreatePlatoCommand
-from application.commands.plato.update_plato import UpdatePlatoCommand
-from application.queries.plato.get_plato_by_day import GetPlatoByDayQuery
-from application.commands.plato.delete_plato_by_id import DeletePlatoByIdCommand
-from infrastructure.api.v1.schemas.plato import CreatePlatoBody, UpdatePlatoBody
-from infrastructure.api.v1.dependencies import get_create_plato_handler, get_update_plato_handler, get_plato_by_day_handler, get_delete_plato_handler
+from src.application.commands.plato.create_plato import CreatePlatoCommand
+from src.application.commands.plato.update_plato import UpdatePlatoCommand
+from src.application.queries.plato.get_plato_by_day import GetPlatoByDayQuery
+from src.application.commands.plato.delete_plato_by_id import DeletePlatoByIdCommand
+from src.infrastructure.api.v1.schemas.plato import CreatePlatoBody, UpdatePlatoBody
+from src.infrastructure.api.v1.dependencies import get_create_plato_handler, get_update_plato_handler, get_plato_by_day_handler, get_delete_plato_handler
 
 router = APIRouter(prefix="/plato", tags=["Plato"])
 

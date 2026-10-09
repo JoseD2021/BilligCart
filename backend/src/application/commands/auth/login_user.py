@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from  application.interfaces.auth_service import AuthService, AuthSession
+from  src.application.interfaces.auth_service import AuthService, AuthSession
 
 @dataclass(frozen=True)
 class LoginUserCommand:

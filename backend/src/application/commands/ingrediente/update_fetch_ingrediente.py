@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 import datetime
 
-from domain.entities.ingrediente import Ingrediente, IngredienteFetchInfo
-from domain.enums.tienda import Tienda
-from domain.repositories.ingrediente_repository import IngredienteRepository
-from domain.errors import InvalidRequestBodyError
+from src.domain.entities.ingrediente import Ingrediente, IngredienteFetchInfo
+from src.domain.enums.tienda import Tienda
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+from src.domain.errors import InvalidRequestBodyError
 
 @dataclass(frozen=True)
 class UpdateFetchIngredientCommand:

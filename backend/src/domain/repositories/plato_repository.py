@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from domain.entities.plato import Plato
+from src.domain.entities.plato import Plato
 
 class PlatoRepository(ABC):
     @abstractmethod

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.enums.plato_tipo import PlatoTipo
+from src.domain.enums.plato_tipo import PlatoTipo
 
 @dataclass(frozen=True)
 class Plato:
