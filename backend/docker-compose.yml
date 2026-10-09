@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - .:/app,z
     environment:
       PORT: 8000
       RABBITMQ_HOST: rabbitmq
@@ -33,7 +33,7 @@ services:
       - -m
       - src.infrastructure.messaging.ai_worker
     volumes:
-      - .:/app
+      - .:/app,z
     environment:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
@@ -75,6 +75,15 @@ services:
       - "11434"
     volumes:
       - ollama:/root/.ollama
+
+    # Configuracion para GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     networks:
       - internal_network
 
