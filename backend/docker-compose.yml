@@ -1,0 +1,96 @@
+services:
+
+  backend:
+    build:
+      context: .
+    container_name: backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app,z
+    env_file: .env
+    environment:
+      PORT: 8000
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: billigcart
+      RABBITMQ_PASSWORD: billigcart123
+      RABBITMQ_QUEUE: ai_requests
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - internal_network
+
+  ai_worker:
+    build:
+      context: .
+    container_name: ai_worker
+    command:
+      - python
+      - -m
+      - src.infrastructure.messaging.ai_worker
+    volumes:
+      - .:/app,z
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: billigcart
+      RABBITMQ_PASSWORD: billigcart123
+      RABBITMQ_QUEUE: ai_requests
+      OLLAMA_BASE_URL: http://ollama:11434
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - internal_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: billigcart-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: billigcart
+      RABBITMQ_DEFAULT_PASS: billigcart123
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - internal_network
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    expose:
+      - "11434"
+    volumes:
+      - ollama:/root/.ollama
+
+    # Configuracion para GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - internal_network
+
+networks:
+  internal_network:
+    driver: bridge
+
+volumes:
+  ollama:
