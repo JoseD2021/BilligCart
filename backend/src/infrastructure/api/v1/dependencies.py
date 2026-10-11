@@ -1,6 +1,9 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from src.infrastructure.http.httpx_fetcher import HttpxFetcher
+from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteHandler
+from src.application.interfaces.fetcher import Fetcher
 from src.application.interfaces.auth_service import AuthService
 from src.application.commands.auth.login_user import LoginUserHandler
 from src.application.commands.auth.register_user import RegisterUserHandler
@@ -136,6 +139,24 @@ def get_update_fetch_ingredient_handler(
     ingr: IngredienteRepository = Depends(get_ingrediente_repository),
 ) -> UpdateFetchIngredientHandler:
     return UpdateFetchIngredientHandler(ingr)
+
+def get_fetcher() -> Fetcher:
+    return HttpxFetcher()
+    
+
+def get_scraper_builders() -> list:
+    from src.infrastructure.scrapers.scraper_olimpica import ScraperOlimpica
+    return [
+        ScraperOlimpica
+    ]
+
+def get_scrape_ingredient_handler(
+    ingr: IngredienteRepository = Depends(get_ingrediente_repository),
+    fetcher = Depends(get_fetcher),
+    builders = Depends(get_scraper_builders),
+    update_fetch = Depends(get_update_fetch_ingredient_handler),
+) -> ScrapeIngredienteHandler:
+    return ScrapeIngredienteHandler(ingr, fetcher, builders, update_fetch)
 
 def get_delete_ingredient_handler(
     ingr: IngredienteRepository = Depends(get_ingrediente_repository),
