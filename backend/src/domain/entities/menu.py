@@ -10,7 +10,7 @@ class Menu:
     
     @classmethod
     def default(cls, user_id: str) -> "Menu":
-        today = datetime.datetime.now()
+        today = datetime.datetime.now(datetime.timezone.utc)
 
         # calc lunes a las 00:00
         start_of_week = today - datetime.timedelta(days=today.weekday())
