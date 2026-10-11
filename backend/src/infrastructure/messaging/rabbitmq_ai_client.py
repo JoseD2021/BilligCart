@@ -13,11 +13,8 @@ class RabbitMQAIClient(AIClientInterface):
     def __init__(self):
         self.host = os.getenv("RABBITMQ_HOST", "rabbitmq")
         self.port = int(os.getenv("RABBITMQ_PORT", "5672"))
-        self.user = os.getenv("RABBITMQ_USER", "billigcart")
-        self.password = os.getenv(
-            "RABBITMQ_PASSWORD",
-            "billigcart123"
-        )
+        self.user = os.getenv("RABBITMQ_USER")
+        self.password = os.getenv("RABBITMQ_PASSWORD")
         self.queue_name = os.getenv(
             "RABBITMQ_QUEUE",
             "ai_requests"
