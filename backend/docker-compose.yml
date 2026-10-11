@@ -83,6 +83,26 @@ services:
     networks:
       - internal_network
 
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: ollama-init
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+    command: >
+      sh -c "
+        echo 'Esperando a que Ollama esté disponible...' &&
+        until [ \"$$(curl -s -o /dev/null -w '%{http_code}' http://ollama:11434/api/tags)\" = \"200\" ]; do
+          sleep 3;
+        done &&
+        echo 'Ollama está listo. Descargando el modelo ${OLLAMA_MODEL}...' &&
+        curl -s -X POST http://ollama:11434/api/pull -d '{\"name\": \"${OLLAMA_MODEL}\"}' &&
+        echo 'Proceso finalizado con éxito.'
+      "
+    networks:
+      - internal_network
+
 networks:
   internal_network:
     driver: bridge
