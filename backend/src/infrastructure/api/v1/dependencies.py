@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from src.infrastructure.scrapers.scraper_exito import ScraperExito
 from src.infrastructure.http.httpx_fetcher import HttpxFetcher
 from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteHandler
 from src.application.interfaces.fetcher import Fetcher
@@ -147,7 +148,8 @@ def get_fetcher() -> Fetcher:
 def get_scraper_builders() -> list:
     from src.infrastructure.scrapers.scraper_olimpica import ScraperOlimpica
     return [
-        ScraperOlimpica
+        ScraperOlimpica,
+        ScraperExito
     ]
 
 def get_scrape_ingredient_handler(

@@ -35,10 +35,10 @@ class IngredienteNotFound(DomainError):
         self.ingredient_id = ingredient_id
         
 class ScrapingError(DomainError):
-    def __init__(self, url: str, original_exception: Exception):
-        super().__init__(f"Error scraping URL {url}: {str(original_exception)}")
+    def __init__(self, url: str, info: dict):
+        super().__init__(f"Error scraping URL {url}: {str(info)}")
         self.url = url
-        self.original_exception = original_exception
+        self.info = info
         
 class IngredienteRecentlyUpdated(DomainError):
     def __init__(self, ingredient_id: int, last_updated: datetime.datetime):

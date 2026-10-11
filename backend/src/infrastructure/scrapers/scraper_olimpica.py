@@ -55,8 +55,8 @@ class ScraperOlimpica(ScraperBuilder):
 
     def get(self) -> Ingrediente:
         d = self._datos
-        if not d.get("nombre") or d.get("precio") or d.get("url") is None:
-            raise ScrapingError("Olimpica: producto incompleto (posible cambio de estructura en la pagina)")
+        if d.get("nombre") is None or d.get("precio") is None or d.get("url") is None:
+            raise ScrapingError("Olimpica: producto incompleto (posible cambio de estructura en la pagina)", d)
         return Ingrediente(
             name=d["nombre"], last_updated=datetime.datetime.now(datetime.timezone.utc),
             price=d["precio"], shop=self.tienda, url=d["url"],
@@ -72,5 +72,6 @@ class ScraperOlimpica(ScraperBuilder):
                     continue
                 oferta = seller.get("commertialOffer") or {}
                 if oferta.get("IsAvailable") and (oferta.get("Price") or 0) > 0:
+                    print(f"[OLIMPICA] Oferta disponible: {producto['productName']} ${oferta['Price']} ({producto['link']})")
                     return oferta
         return None
