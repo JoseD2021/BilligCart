@@ -1,10 +1,13 @@
+// Identidad visual de "Planificador de Comidas y Presupuesto"
+// Paleta pensada para transmitir frescura (comida) y control (presupuesto),
+// evitando el genérico "verde app de salud".
 
 export const colors = {
-  primary: "#2F6F4E",      // acciones principales, encabezados
+  primary: "#2F6F4E",      // verde bosque — acciones principales, encabezados
   primaryDark: "#1F4D36",
-  accent: "#E3A008",       // precios, ahorro, destacados
-  warning: "#E8604C",      // alertas de presupuesto excedido
-  background: "#FAF7F2",   // fondo general
+  accent: "#E3A008",       // mostaza — precios, ahorro, destacados
+  warning: "#E8604C",      // coral — alertas de presupuesto excedido
+  background: "#FAF7F2",   // hueso — fondo general
   surface: "#FFFFFF",
   border: "#E7E1D6",
   text: "#26302A",

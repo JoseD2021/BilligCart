@@ -1,26 +1,30 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import Card from "../components/Card";
 import { colors, spacing, radius, typography } from "../theme/theme";
-import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { getPreferencias, guardarPreferencias } from "../services/preferenciasService";
 
 const RESTRICCIONES = ["Vegetariano", "Vegano", "Sin gluten", "Sin lactosa", "Sin frutos secos"];
 
 export default function PreferenciasScreen() {
   const { usuario, cerrarSesion } = useAuth();
-  const usuarioId = usuario?.id || "demo";
   const [restricciones, setRestricciones] = useState([]);
   const [presupuesto, setPresupuesto] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState(null); // { ok, texto }
+
+  // Carga lo que el usuario ya guardó antes.
+  useEffect(() => {
+    if (!usuario?.id) return;
+    getPreferencias(usuario.id)
+      .then((p) => {
+        if (!p) return;
+        setRestricciones(p.restricciones ?? []);
+        setPresupuesto(p.presupuesto_semanal ? String(p.presupuesto_semanal) : "");
+      })
+      .catch((e) => console.warn("getPreferencias:", e.message));
+  }, [usuario?.id]);
 
   function toggleRestriccion(item) {
     setRestricciones((prev) =>
@@ -30,14 +34,17 @@ export default function PreferenciasScreen() {
 
   async function guardar() {
     setGuardando(true);
+    setMensaje(null);
     try {
-      await api.guardarPreferencias(usuarioId, {
+      await guardarPreferencias(usuario.id, {
         restricciones,
-        presupuesto_semanal: Number(presupuesto) || 0,
+        // Acepta "150.000" o "150000": se dejan solo los dígitos.
+        presupuesto_semanal: Number(presupuesto.replace(/\D/g, "")) || 0,
       });
-      Alert.alert("Preferencias guardadas", "Tu próximo menú las tendrá en cuenta.");
+      setMensaje({ ok: true, texto: "Preferencias guardadas. Tu próximo menú las tendrá en cuenta." });
     } catch (e) {
-      Alert.alert("No se pudo guardar", "Revisa tu conexión e intenta de nuevo.");
+      console.warn("guardarPreferencias:", e.message);
+      setMensaje({ ok: false, texto: "No se pudieron guardar. Revisa tu conexión e intenta de nuevo." });
     } finally {
       setGuardando(false);
     }
@@ -86,15 +93,17 @@ export default function PreferenciasScreen() {
         </View>
       </Card>
 
-      <TouchableOpacity
-        style={styles.botonGuardar}
-        onPress={guardar}
-        disabled={guardando}
-      >
+      <TouchableOpacity style={styles.botonGuardar} onPress={guardar} disabled={guardando}>
         <Text style={styles.botonGuardarTexto}>
           {guardando ? "Guardando..." : "Guardar preferencias"}
         </Text>
       </TouchableOpacity>
+
+      {mensaje && (
+        <Text style={[styles.mensaje, { color: mensaje.ok ? colors.primary : colors.warning }]}>
+          {mensaje.texto}
+        </Text>
+      )}
 
       <TouchableOpacity style={styles.botonCerrarSesion} onPress={cerrarSesion}>
         <Text style={styles.botonCerrarSesionTexto}>Cerrar sesión</Text>
@@ -138,6 +147,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   botonGuardarTexto: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  mensaje: { marginTop: spacing.sm, fontSize: 13, fontWeight: "600", textAlign: "center" },
   botonCerrarSesion: {
     alignItems: "center",
     paddingVertical: spacing.md,
