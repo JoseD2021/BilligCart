@@ -20,6 +20,11 @@ class MenuGenerationCompleted(BaseEvent):
     model: str
     duration_ms: int
 
+    # Datos necesarios para que quien consuma el evento guarde el menú:
+    # el dueño del menú y la respuesta cruda que devolvió la IA.
+    user_id: str | None = None
+    response: str | None = None
+
 
 @dataclass(frozen=True, kw_only=True)
 class MenuGenerationFailed(BaseEvent):

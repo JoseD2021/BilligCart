@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from supabase import AsyncClient
 
 from src.infrastructure.scrapers.scraper_exito import ScraperExito
 from src.infrastructure.http.httpx_fetcher import HttpxFetcher
@@ -43,6 +44,13 @@ from src.domain.entities.user import User
 
 bearer = HTTPBearer()
 
+# ------- Supabase -------------
+# Separado para que los repositorios se puedan construir también fuera de
+# FastAPI (p. ej. desde el event worker), pasándole el cliente directamente.
+
+def get_supabase_client(request: Request) -> AsyncClient:
+    return request.app.state.supabase
+
 # ------- Auth / User -------------
 
 def get_auth_service(request: Request) -> AuthService:
@@ -75,9 +83,9 @@ def get_login_handler(
 
 # -------- Menu ------------
 def get_menu_repository(
-    request: Request
+    client: AsyncClient = Depends(get_supabase_client),
 ) -> MenuRepository:
-    return SupabaseMenuRepository(request.app.state.supabase)
+    return SupabaseMenuRepository(client)
 
 def get_create_menu_handler(
     menu: MenuRepository = Depends(get_menu_repository),
@@ -96,9 +104,9 @@ def get_menu_by_date_handler(
 
 # -------- Platos ---------
 def get_plato_repository(
-    request: Request
+    client: AsyncClient = Depends(get_supabase_client),
 ) -> PlatoRepository:
-    return SupabasePlatoRepository(request.app.state.supabase)
+    return SupabasePlatoRepository(client)
 
 def get_create_plato_handler(
     plato: PlatoRepository = Depends(get_plato_repository),
@@ -122,9 +130,9 @@ def get_delete_plato_handler(
 
 # -------- Ingredientes ---------
 def get_ingrediente_repository(
-    request: Request
+    client: AsyncClient = Depends(get_supabase_client),
 ) -> IngredienteRepository:
-    return SupabaseIngredienteRepository(request.app.state.supabase)
+    return SupabaseIngredienteRepository(client)
 
 def get_create_ingredient_handler(
     ingr: IngredienteRepository = Depends(get_ingrediente_repository),
@@ -172,9 +180,9 @@ def get_get_ingredient_by_id_handler(
 
 # -------- PlatoIngrediente ---------
 def get_plato_ingrediente_repository(
-    request: Request
+    client: AsyncClient = Depends(get_supabase_client),
 ) -> PlatoIngredienteRepository:
-    return SupabasePlatoIngredienteRepository(request.app.state.supabase)
+    return SupabasePlatoIngredienteRepository(client)
 
 def get_create_plato_ingrediente_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),

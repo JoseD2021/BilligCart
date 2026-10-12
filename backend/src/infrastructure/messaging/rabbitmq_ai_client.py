@@ -23,7 +23,11 @@ class RabbitMQAIClient(AIClientInterface):
             "ai_requests"
         )
 
-    def generate_response(self, prompt: str) -> str:
+    def generate_response(
+        self,
+        prompt: str,
+        user_id: str | None = None
+    ) -> str:
 
         credentials = pika.PlainCredentials(
             self.user,
@@ -73,6 +77,11 @@ class RabbitMQAIClient(AIClientInterface):
         message = {
             "prompt": prompt
         }
+
+        # El worker necesita el dueño del menú para incluirlo en el
+        # evento de generación completada y así poder guardarlo.
+        if user_id is not None:
+            message["user_id"] = user_id
 
         channel.basic_publish(
             exchange="",

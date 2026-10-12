@@ -6,5 +6,5 @@ class GenerateResponseUseCase:
   def __init__(self, ai_client: AIClientInterface):
     self.ai_client = ai_client
 
-  def execute(self, prompt: str) -> str:
-    return self.ai_client.generate_response(prompt)
+  def execute(self, prompt: str, user_id: str | None = None) -> str:
+    return self.ai_client.generate_response(prompt, user_id)
