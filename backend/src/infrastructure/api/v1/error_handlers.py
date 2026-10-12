@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from postgrest import APIError
 from src.domain.errors import (
-    DomainError, EmailAlreadyRegistered, InvalidCredentials, InvalidEmail, InvalidRequestBodyError, UserNotFound, WeakPassword,
+    DomainError, EmailAlreadyRegistered, IngredienteRecentlyUpdated, InvalidCredentials, InvalidEmail, InvalidRequestBodyError, UserNotFound, WeakPassword,
 )
 
 STATUS_BY_ERROR = {
@@ -11,7 +11,8 @@ STATUS_BY_ERROR = {
     UserNotFound: 404,
     InvalidEmail: 422,
     WeakPassword: 422,
-    InvalidRequestBodyError: 400
+    InvalidRequestBodyError: 400,
+    IngredienteRecentlyUpdated: 429,
 }
 
 def register_error_handlers(app: FastAPI) -> None:

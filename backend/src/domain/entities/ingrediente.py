@@ -8,12 +8,12 @@ class IngredienteFetchInfo:
     shop: Tienda
     price: float
     url: str
-    fetched_at: datetime.date
+    fetched_at: datetime.datetime
 
 @dataclass(frozen=True)
 class Ingrediente:
     name: str
-    last_updated: datetime.date
+    last_updated: datetime.datetime
     
     shop: Tienda | None
     price: float | None
@@ -23,4 +23,4 @@ class Ingrediente:
     
     @classmethod
     def default(cls, name: str) -> "Ingrediente":
-        return cls(name=name, last_updated=datetime.datetime.now(), shop=None, price=None, url=None)
+        return cls(name=name, last_updated=datetime.datetime.now(datetime.timezone.utc), shop=None, price=None, url=None)

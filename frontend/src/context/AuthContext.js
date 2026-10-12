@@ -1,94 +1,116 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api, setAuthToken } from "../services/api";
+import { supabase } from "../services/supabase";
+import { setAuthToken } from "../services/api";
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = "@planificador/session";
+
+// Traduce los errores de Supabase Auth (error.code) a mensajes para el usuario.
+function mensajeDeError(e) {
+  switch (e?.code) {
+    case "invalid_credentials":
+      return "Correo o contraseña incorrectos.";
+    case "email_not_confirmed":
+      return "Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.";
+    case "user_already_exists":
+    case "email_exists":
+      return "Ese correo ya tiene una cuenta.";
+    case "weak_password":
+      return "La contraseña es muy débil (mínimo 6 caracteres).";
+    case "email_address_invalid":
+    case "validation_failed":
+      return "El correo no es válido.";
+    case "over_request_rate_limit":
+    case "over_email_send_rate_limit":
+      return "Demasiados intentos. Espera un momento e intenta de nuevo.";
+  }
+  const m = (e?.message ?? "").toLowerCase();
+  if (m.includes("fetch") || m.includes("network")) {
+    return "No se pudo conectar con Supabase. Revisa EXPO_PUBLIC_SUPABASE_URL en frontend/.env y tu conexión.";
+  }
+  if (m.includes("invalid api key") || m.includes("apikey")) {
+    return "La clave de Supabase es inválida. Revisa EXPO_PUBLIC_SUPABASE_ANON_KEY en frontend/.env y reinicia con: npx expo start -c";
+  }
+  return "No se pudo completar la operación. Intenta de nuevo.";
+}
 
 export function AuthProvider({ children }) {
-  const [usuario, setUsuario] = useState(null);
-  const [token, setToken] = useState(null);
+  const [session, setSession] = useState(null);
   const [cargandoSesion, setCargandoSesion] = useState(true);
   const [error, setError] = useState(null);
 
-  // Al abrir la app, intenta restaurar la sesión guardada.
-  useEffect(() => {
-    (async () => {
-      try {
-        const guardado = await AsyncStorage.getItem(STORAGE_KEY);
-        if (guardado) {
-          const { usuario: u, token: t } = JSON.parse(guardado);
-          setUsuario(u);
-          setToken(t);
-          setAuthToken(t);
-        }
-      } catch (e) {
-        // Si falla la restauración, simplemente se pide iniciar sesión de nuevo.
-        console.warn("No se pudo restaurar la sesión:", e.message);
-      } finally {
-        setCargandoSesion(false);
-      }
-    })();
-  }, []);
-
-  async function persistirSesion(usuarioData, tokenData) {
-    setUsuario(usuarioData);
-    setToken(tokenData);
-    setAuthToken(tokenData);
-    await AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ usuario: usuarioData, token: tokenData })
-    );
+  function aplicarSesion(s) {
+    setSession(s);
+    // Token para las llamadas que aún van al backend (p. ej. confirmar compra).
+    setAuthToken(s?.access_token ?? null);
   }
 
+  useEffect(() => {
+    supabase.auth
+      .getSession()
+      .then(({ data }) => aplicarSesion(data.session))
+      .catch((e) => console.warn("No se pudo restaurar la sesión:", e.message))
+      .finally(() => setCargandoSesion(false));
+
+    const { data } = supabase.auth.onAuthStateChange((_evento, nueva) => aplicarSesion(nueva));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  // Login directo contra Supabase Auth (sin pasar por el backend).
   async function iniciarSesion(email, password) {
     setError(null);
     try {
-      const resp = await api.login(email, password);
-      await persistirSesion(resp.usuario, resp.token);
-      return true;
+      const { error: e } = await supabase.auth.signInWithPassword({ email, password });
+      if (e) throw e;
+      return true; // onAuthStateChange actualiza la sesión y la navegación cambia sola
     } catch (e) {
-      setError("Correo o contraseña incorrectos.");
+      console.warn("signInWithPassword:", e.message);
+      setError(mensajeDeError(e));
       return false;
     }
   }
 
-  async function registrarse(datos) {
+  async function registrarse({ email, password }) {
     setError(null);
     try {
-      const resp = await api.registrar(datos);
-      await persistirSesion(resp.usuario, resp.token);
-      return true;
+      const { data, error: e } = await supabase.auth.signUp({ email, password });
+      if (e) throw e;
+      // Con "Confirm email" activo y el correo ya registrado, Supabase no da error:
+      // devuelve un usuario sin identidades.
+      if (data.user && (data.user.identities ?? []).length === 0) {
+        setError("Ese correo ya tiene una cuenta.");
+        return { ok: false };
+      }
+      // Con "Confirm email" activo no hay sesión hasta confirmar el correo.
+      return { ok: true, confirmarCorreo: !data.session };
     } catch (e) {
-      setError("No se pudo crear la cuenta. Verifica los datos.");
-      return false;
+      console.warn("signUp:", e.message);
+      setError(mensajeDeError(e));
+      return { ok: false };
     }
-  }
-
-  // Modo demo: entra sin backend, usando un usuario falso en memoria.
-  
-  async function entrarModoDemo() {
-    await persistirSesion({ id: "demo", nombre: "Usuario Demo" }, "token-demo");
   }
 
   async function cerrarSesion() {
-    setUsuario(null);
-    setToken(null);
-    setAuthToken(null);
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    await supabase.auth.signOut();
   }
+
+  const usuario = session?.user
+    ? {
+        id: session.user.id,
+        email: session.user.email,
+        nombre: session.user.user_metadata?.nombre,
+      }
+    : null;
 
   return (
     <AuthContext.Provider
       value={{
         usuario,
-        token,
-        estaAutenticado: !!token,
+        session,
+        estaAutenticado: !!session,
         cargandoSesion,
         error,
         iniciarSesion,
         registrarse,
-        entrarModoDemo,
         cerrarSesion,
       }}
     >

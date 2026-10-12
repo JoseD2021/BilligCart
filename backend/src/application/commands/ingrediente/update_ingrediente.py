@@ -18,7 +18,7 @@ class UpdateIngredientHandler:
         ingrediente = Ingrediente(
             id=cmd.id,
             name=cmd.name,
-            last_updated=datetime.datetime.now(),
+            last_updated=datetime.datetime.now(datetime.timezone.utc),
             
             # estos son ignorados pero son necesarios para crear el objeto Ingrediente
             shop=None,

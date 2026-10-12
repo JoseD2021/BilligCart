@@ -15,16 +15,17 @@ import { useAuth } from "../context/AuthContext";
 
 export default function RegisterScreen({ navigation }) {
   const { registrarse, error } = useAuth();
-  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [errorLocal, setErrorLocal] = useState(null);
+  const [info, setInfo] = useState(null);
   const [cargando, setCargando] = useState(false);
 
   async function handleRegistro() {
     setErrorLocal(null);
-    if (!nombre || !email || !password) {
+    setInfo(null);
+    if (!email || !password) {
       setErrorLocal("Completa todos los campos.");
       return;
     }
@@ -32,9 +33,16 @@ export default function RegisterScreen({ navigation }) {
       setErrorLocal("Las contraseñas no coinciden.");
       return;
     }
+    if (password.length < 6) {
+      setErrorLocal("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
     setCargando(true);
-    await registrarse({ nombre, email: email.trim(), password });
+    const res = await registrarse({ email: email.trim(), password });
     setCargando(false);
+    if (res.ok && res.confirmarCorreo) {
+      setInfo("Te enviamos un correo para confirmar tu cuenta. Confírmalo y luego inicia sesión.");
+    }
   }
 
   return (
@@ -47,15 +55,6 @@ export default function RegisterScreen({ navigation }) {
         <Text style={[typography.bodyMuted, { marginBottom: spacing.xl }]}>
           Para empezar a planear tu menú y tu presupuesto semanal.
         </Text>
-
-        <Text style={typography.label}>NOMBRE</Text>
-        <TextInput
-          style={styles.input}
-          value={nombre}
-          onChangeText={setNombre}
-          placeholder="Tu nombre"
-          placeholderTextColor={colors.textMuted}
-        />
 
         <Text style={[typography.label, { marginTop: spacing.md }]}>CORREO</Text>
         <TextInput
@@ -73,7 +72,7 @@ export default function RegisterScreen({ navigation }) {
           style={styles.input}
           value={password}
           onChangeText={setPassword}
-          placeholder="Mínimo 8 caracteres"
+          placeholder="Mínimo 6 caracteres"
           placeholderTextColor={colors.textMuted}
           secureTextEntry
         />
@@ -91,6 +90,7 @@ export default function RegisterScreen({ navigation }) {
         {(errorLocal || error) && (
           <Text style={styles.errorTexto}>{errorLocal || error}</Text>
         )}
+        {info && <Text style={styles.infoTexto}>{info}</Text>}
 
         <TouchableOpacity style={styles.boton} onPress={handleRegistro} disabled={cargando}>
           {cargando ? (
@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   errorTexto: { color: colors.warning, marginTop: spacing.sm, fontSize: 13 },
+  infoTexto: { color: colors.primary, marginTop: spacing.sm, fontSize: 13, fontWeight: "600" },
   boton: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,

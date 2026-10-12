@@ -24,7 +24,7 @@ class UpdateFetchIngredientHandler:
             shop=cmd.shop,
             price=cmd.price,
             url=cmd.url,
-            fetched_at=datetime.datetime.now(),
+            fetched_at=datetime.datetime.now(datetime.timezone.utc),
         )
         
         if fetch_info.price < 0:

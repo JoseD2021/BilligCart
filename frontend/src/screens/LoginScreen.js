@@ -13,7 +13,7 @@ import { colors, spacing, radius, typography } from "../theme/theme";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen({ navigation }) {
-  const { iniciarSesion, entrarModoDemo, error } = useAuth();
+  const { iniciarSesion, error } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -76,12 +76,6 @@ export default function LoginScreen({ navigation }) {
             ¿No tienes cuenta? <Text style={styles.linkTexto}>Regístrate</Text>
           </Text>
         </TouchableOpacity>
-
-        {/* Temporal: mientras el backend no está listo, permite ver el resto
-            de la app sin depender de /auth/login. Quitar cuando el backend exista. */}
-        <TouchableOpacity style={styles.linkDemo} onPress={entrarModoDemo}>
-          <Text style={styles.linkDemoTexto}>Continuar sin cuenta (modo demo)</Text>
-        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -112,6 +106,4 @@ const styles = StyleSheet.create({
   botonTexto: { color: colors.white, fontWeight: "700", fontSize: 15 },
   linkRegistro: { marginTop: spacing.lg, alignItems: "center" },
   linkTexto: { color: colors.primary, fontWeight: "700" },
-  linkDemo: { marginTop: spacing.md, alignItems: "center" },
-  linkDemoTexto: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
 });

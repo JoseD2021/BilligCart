@@ -6,8 +6,7 @@ import { colors } from "../theme/theme";
 
 const Stack = createNativeStackNavigator();
 
-// Pila de navegación dentro de la pestaña "Menú":
-// lista de días de la semana -> detalle del día (desayuno, almuerzo, cena).
+
 export default function MenuStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
