@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "BilligCart",
+    "slug": "billigcart",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}
