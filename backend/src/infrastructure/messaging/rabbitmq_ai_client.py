@@ -85,7 +85,7 @@ class RabbitMQAIClient(AIClientInterface):
             )
         )
 
-        timeout = 120
+        timeout = 400
         start_time = time.monotonic()
 
         while "data" not in response:

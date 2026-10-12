@@ -1,5 +1,5 @@
-services:
 
+services:
   backend:
     build:
       context: .
@@ -8,20 +8,14 @@ services:
       - "8000:8000"
     volumes:
       - .:/app,z
-    env_file: .env
+    env_file:
+      - .env
     environment:
-      PORT: 8000
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: billigcart
-      RABBITMQ_PASSWORD: billigcart123
-      RABBITMQ_QUEUE: ai_requests
+      PORT: "8000"
     restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
     networks:
       - internal_network
 
@@ -35,19 +29,35 @@ services:
       - src.infrastructure.messaging.ai_worker
     volumes:
       - .:/app,z
+    env_file:
+      - .env
     environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: billigcart
-      RABBITMQ_PASSWORD: billigcart123
-      RABBITMQ_QUEUE: ai_requests
       OLLAMA_BASE_URL: http://ollama:11434
     restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
+      ollama-init:
+        condition: service_completed_successfully
+    networks:
+      - internal_network
+
+  event_worker:
+    build:
+      context: .
+    container_name: event_worker
+    command:
+      - python
+      - -m
+      - src.events.run_ai_events_worker
+    volumes:
+      - .:/app,z
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     networks:
       - internal_network
 
@@ -58,10 +68,14 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: billigcart
-      RABBITMQ_DEFAULT_PASS: billigcart123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Define RABBITMQ_USER en .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Define RABBITMQ_PASSWORD en .env}
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test:
+        - CMD
+        - rabbitmq-diagnostics
+        - -q
+        - ping
       interval: 5s
       timeout: 5s
       retries: 10
@@ -76,15 +90,31 @@ services:
       - "11434"
     volumes:
       - ollama:/root/.ollama
+    networks:
+      - internal_network
 
-    # Configuracion para GPU
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: ollama-init
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:270m}
+    command:
+      - sh
+      - -c
+      - |
+        echo "Esperando a que Ollama esté disponible..."
+        until curl -fsS http://ollama:11434/api/tags >/dev/null; do
+          sleep 3
+        done
+        echo "Descargando el modelo $${OLLAMA_MODEL}..."
+        curl --fail --show-error -sS \
+          -X POST http://ollama:11434/api/pull \
+          -H "Content-Type: application/json" \
+          -d "{\"name\":\"$${OLLAMA_MODEL}\"}"
+        echo "Descarga finalizada."
+    restart: "no"
     networks:
       - internal_network
 

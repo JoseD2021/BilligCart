@@ -1,201 +1,231 @@
+import asyncio
 import json
 import logging
 import os
 import time
+from uuid import uuid4
 
-import pika
-from pika.exceptions import AMQPConnectionError
+import aio_pika
+from aio_pika import DeliveryMode, Message
+from dotenv import load_dotenv
 
+from src.events.contracts.ai_menu_events import (
+    MenuGenerationCompleted,
+    MenuGenerationFailed,
+    MenuGenerationStarted,
+)
+from src.events.infrastructure.rabbitmq_event_bus import RabbitMQEventBus
 from src.infrastructure.ai.ollama import OllamaClient
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
-
-logger = logging.getLogger("ai-worker")
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-RABBITMQ_HOST = os.getenv(
-    "RABBITMQ_HOST",
-    "rabbitmq"
-)
-
-RABBITMQ_PORT = int(
-    os.getenv("RABBITMQ_PORT", "5672")
-)
-
-RABBITMQ_USER = os.getenv(
-    "RABBITMQ_USER",
-    "billigcart"
-)
-
-RABBITMQ_PASSWORD = os.getenv(
-    "RABBITMQ_PASSWORD",
-    "billigcart123"
-)
-
-RABBITMQ_QUEUE = os.getenv(
-    "RABBITMQ_QUEUE",
-    "ai_requests"
-)
-
-
-def create_connection():
-
-    credentials = pika.PlainCredentials(
-        RABBITMQ_USER,
-        RABBITMQ_PASSWORD
-    )
-
-    parameters = pika.ConnectionParameters(
-        host=RABBITMQ_HOST,
-        port=RABBITMQ_PORT,
-        credentials=credentials,
-        heartbeat=60,
-        connection_attempts=5,
-        retry_delay=2
-    )
-
-    return pika.BlockingConnection(parameters)
-
-
-def start_worker():
-
-    ollama_client = OllamaClient(
-        base_url=os.getenv(
-            "OLLAMA_BASE_URL",
-            "http://ollama:11434"
+async def publish_event_safely(
+    event_bus: RabbitMQEventBus,
+    event,
+) -> None:
+    """
+    Los eventos de seguimiento no deben impedir que la IA
+    devuelva el resultado por el canal de petición-respuesta.
+    """
+    try:
+        await event_bus.publish(event)
+    except Exception:
+        logger.exception(
+            "No se pudo publicar el evento %s",
+            event.event_type,
         )
+
+
+async def send_response(
+    channel,
+    reply_to: str,
+    correlation_id: str,
+    payload: dict,
+) -> None:
+    await channel.default_exchange.publish(
+        Message(
+            body=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            content_type="application/json",
+            correlation_id=correlation_id,
+            delivery_mode=DeliveryMode.PERSISTENT,
+        ),
+        routing_key=reply_to,
     )
 
-    while True:
 
-        connection = None
+async def process_message(
+    message,
+    channel,
+    ollama_client: OllamaClient,
+    event_bus: RabbitMQEventBus,
+) -> None:
+    async with message.process(requeue=False):
+        request_id = message.correlation_id or str(uuid4())
+        model = ollama_client.model
 
         try:
+            request_data = json.loads(message.body.decode("utf-8"))
+            prompt = request_data.get("prompt")
 
-            logger.info(
-                "Conectando a RabbitMQ..."
+            if not isinstance(prompt, str) or not prompt.strip():
+                raise ValueError("El prompt es obligatorio.")
+
+            await publish_event_safely(
+                event_bus,
+                MenuGenerationStarted(
+                    request_id=request_id,
+                    model=model,
+                ),
             )
 
-            connection = create_connection()
+            started_at = time.monotonic()
 
-            channel = connection.channel()
-
-            channel.queue_declare(
-                queue=RABBITMQ_QUEUE,
-                durable=True
-            )
-
-            channel.basic_qos(
-                prefetch_count=1
-            )
-
-            logger.info(
-                "AI Worker conectado. "
-                "Esperando mensajes..."
-            )
-
-            def process_message(
-                ch,
-                method,
-                properties,
-                body
-            ):
-
-                try:
-
-                    message = json.loads(body)
-
-                    prompt = message.get("prompt")
-
-                    if not prompt:
-                        raise ValueError(
-                            "El mensaje no contiene 'prompt'"
-                        )
-
-                    logger.info(
-                        "Procesando solicitud "
-                        "correlation_id=%s",
-                        properties.correlation_id
-                    )
-
-                    result = ollama_client.generate_response(
-                        prompt
-                    )
-
-                    response = {
-                        "status": "success",
-                        "response": result
-                    }
-
-                    logger.info(
-                        "Respuesta generada correctamente "
-                        "correlation_id=%s",
-                        properties.correlation_id
-                    )
-
-                except Exception as error:
-
-                    logger.exception(
-                        "Error procesando solicitud "
-                        "correlation_id=%s",
-                        properties.correlation_id
-                    )
-
-                    response = {
-                        "status": "error",
-                        "error": str(error)
-                    }
-
-                if properties.reply_to:
-
-                    ch.basic_publish(
-                        exchange="",
-                        routing_key=properties.reply_to,
-                        body=json.dumps(response),
-                        properties=pika.BasicProperties(
-                            correlation_id=properties.correlation_id
-                        )
-                    )
-
-                ch.basic_ack(
-                    delivery_tag=method.delivery_tag
+            try:
+                # requests es síncrono; lo ejecutamos fuera del
+                # event loop para que no bloquee al consumidor.
+                generated_menu = await asyncio.to_thread(
+                    ollama_client.generate_response,
+                    prompt,
                 )
 
-            channel.basic_consume(
-                queue=RABBITMQ_QUEUE,
-                on_message_callback=process_message,
-                auto_ack=False
+            except Exception as exc:
+                await publish_event_safely(
+                    event_bus,
+                    MenuGenerationFailed(
+                        request_id=request_id,
+                        model=model,
+                        error_type=type(exc).__name__,
+                    ),
+                )
+
+                result = {
+                    "status": "error",
+                    "error": "No fue posible generar el menú.",
+                }
+
+                logger.exception(
+                    "Falló la generación de menú. request_id=%s",
+                    request_id,
+                )
+
+            else:
+                duration_ms = int(
+                    (time.monotonic() - started_at) * 1000
+                )
+
+                await publish_event_safely(
+                    event_bus,
+                    MenuGenerationCompleted(
+                        request_id=request_id,
+                        model=model,
+                        duration_ms=duration_ms,
+                    ),
+                )
+
+                result = {
+                    "status": "success",
+                    "response": generated_menu,
+                }
+
+                logger.info(
+                    "Generación completada. request_id=%s duration_ms=%s",
+                    request_id,
+                    duration_ms,
+                )
+
+        except Exception as exc:
+            await publish_event_safely(
+                event_bus,
+                MenuGenerationFailed(
+                    request_id=request_id,
+                    model=model,
+                    error_type=type(exc).__name__,
+                ),
             )
 
-            channel.start_consuming()
+            result = {
+                "status": "error",
+                "error": str(exc),
+            }
 
-        except AMQPConnectionError:
-
-            logger.exception(
-                "RabbitMQ no disponible. "
-                "Reintentando en 5 segundos..."
+            logger.warning(
+                "Solicitud inválida o fallida. request_id=%s type=%s",
+                request_id,
+                type(exc).__name__,
             )
 
-            time.sleep(5)
-
-        except Exception:
-
-            logger.exception(
-                "Error inesperado en el worker. "
-                "Reintentando en 5 segundos..."
+        # Respondemos usando el contrato que ya conoce
+        # RabbitMQAIClient, sin convertir la respuesta en un evento.
+        if message.reply_to:
+            await send_response(
+                channel=channel,
+                reply_to=message.reply_to,
+                correlation_id=request_id,
+                payload=result,
             )
 
-            time.sleep(5)
 
-        finally:
+async def main() -> None:
+    host = os.getenv("RABBITMQ_HOST", "rabbitmq")
+    port = int(os.getenv("RABBITMQ_PORT", "5672"))
+    username = os.getenv("RABBITMQ_USER")
+    password = os.getenv("RABBITMQ_PASSWORD")
+    queue_name = os.getenv("RABBITMQ_QUEUE", "ai_requests")
+    virtual_host = os.getenv("RABBITMQ_VHOST", "/")
 
-            if connection and connection.is_open:
-                connection.close()
+    if not username or not password:
+        raise RuntimeError(
+            "Debes configurar RABBITMQ_USER y RABBITMQ_PASSWORD."
+        )
+
+    ollama_client = OllamaClient()
+    event_bus = RabbitMQEventBus()
+
+    connection = await aio_pika.connect_robust(
+        host=host,
+        port=port,
+        login=username,
+        password=password,
+        virtualhost=virtual_host,
+        heartbeat=60,
+    )
+
+    try:
+        channel = await connection.channel()
+        await channel.set_qos(prefetch_count=1)
+
+        queue = await channel.declare_queue(
+            queue_name,
+            durable=True,
+        )
+
+        async def on_message(message) -> None:
+            await process_message(
+                message=message,
+                channel=channel,
+                ollama_client=ollama_client,
+                event_bus=event_bus,
+            )
+
+        await queue.consume(on_message)
+
+        logger.info(
+            "AI Worker escuchando en la cola %s con modelo %s",
+            queue_name,
+            ollama_client.model,
+        )
+
+        # Mantiene vivo el proceso hasta que se detenga.
+        await asyncio.Future()
+
+    finally:
+        await event_bus.close()
+        await connection.close()
 
 
 if __name__ == "__main__":
-    start_worker()
+    asyncio.run(main())
