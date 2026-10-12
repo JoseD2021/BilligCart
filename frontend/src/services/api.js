@@ -45,10 +45,15 @@ async function leerError(res) {
   } catch (_) {
     /* el cuerpo no era JSON */
   }
+  // Para depurar: muestra en la consola el detalle real que devolvió el backend.
+  console.warn(`[api] ${res.status} ${res.url}`, body);
   const codigo = body?.error;
   if (codigo && MENSAJES[codigo]) return new ApiError(res.status, codigo, MENSAJES[codigo]);
   // FastAPI devuelve { detail: [...] } cuando falla la validación del cuerpo (p. ej. correo mal escrito).
   if (res.status === 422) return new ApiError(res.status, "ValidationError", "Revisa los datos ingresados.");
+  // El endpoint /ai/generate responde 504 (IA tardó demasiado) o 503 (sin mensajería) con { detail }.
+  if (res.status === 504) return new ApiError(res.status, "AITimeout", "La IA tardó demasiado en responder.");
+  if (res.status === 503) return new ApiError(res.status, "AIUnavailable", "El servicio de IA no está disponible.");
   return new ApiError(res.status, codigo, "El servidor tuvo un problema. Intenta de nuevo.");
 }
 
@@ -63,13 +68,13 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // --- Autenticación ---
+
   login: (email, password) =>
     request(`/auth/login`, { method: "POST", body: JSON.stringify({ email, password }) }),
   registrar: ({ email, password }) =>
     request(`/auth/register`, { method: "POST", body: JSON.stringify({ email, password }) }),
 
-  // --- Preferencias del usuario ---
+
   getPreferencias: (usuarioId) => request(`/usuarios/${usuarioId}/preferencias`),
   guardarPreferencias: (usuarioId, data) =>
     request(`/usuarios/${usuarioId}/preferencias`, {
@@ -80,11 +85,28 @@ export const api = {
   // --- Menú semanal (generado por el servicio de Menú/Recetas) ---
   getMenuSemanal: (usuarioId) => request(`/usuarios/${usuarioId}/menu-semanal`),
 
-  // --- Lista de compras (construida con el patrón Builder en el backend) ---
+  // --- Menú: endpoints reales del backend (los usa services/menuGenerador.js) ---
+  getMenuActual: () => request(`/menu/current`), // null si aún no hay menú de esta semana
+  crearMenu: () => request(`/menu/create`, { method: "POST" }), // OJO: no devuelve el id
+  generarConIA: (prompt) =>
+    request(`/ai/generate`, { method: "POST", body: JSON.stringify({ prompt }) }),
+  getPlatosPorDia: (menuId, dia) => request(`/plato/day/${dia}?menu_id=${menuId}`),
+  crearPlato: (plato) => request(`/plato/create`, { method: "POST", body: JSON.stringify(plato) }), // OJO: no devuelve el id
+  eliminarPlato: (id) => request(`/plato/delete/${id}`, { method: "DELETE" }),
+  crearIngrediente: (name) =>
+    request(`/ingrediente/create`, { method: "POST", body: JSON.stringify({ name }) }),
+  crearPlatoIngredientes: (lista) =>
+    request(`/plato-ingrediente/create-many`, { method: "POST", body: JSON.stringify(lista) }),
+  getIngredientesDePlato: (platoId) => request(`/plato-ingrediente/get-by-plato/${platoId}`),
+  getIngrediente: (id) => request(`/ingrediente/get/${id}`),
+  eliminarIngredientesDePlato: (platoId) =>
+    request(`/plato-ingrediente/delete-by-plato/${platoId}`, { method: "DELETE" }),
+
+
   getListaDeCompras: (usuarioId) => request(`/usuarios/${usuarioId}/lista-compras`),
   confirmarCompra: (usuarioId) =>
     request(`/usuarios/${usuarioId}/lista-compras/confirmar`, { method: "POST" }),
 
-  // --- Estado del pedido (servicio propio de Repartidores) ---
+ 
   getEstadoPedido: (pedidoId) => request(`/pedidos/${pedidoId}/estado`),
 };

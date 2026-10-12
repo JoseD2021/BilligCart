@@ -10,8 +10,7 @@ import { colors } from "../theme/theme";
 
 const Tab = createBottomTabNavigator();
 
-// Iconos simples con emoji para no depender de una librería de íconos
-// mientras se define el set de íconos final del proyecto.
+
 const ICONOS = {
   Menú: "🍽️",
   Compras: "🛒",
