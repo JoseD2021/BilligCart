@@ -92,6 +92,15 @@ services:
       - ollama:/root/.ollama
     networks:
       - internal_network
+    
+    # Configuracion para GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   ollama-init:
     image: curlimages/curl:latest
