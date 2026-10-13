@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from src.application.use_cases.generate_response import (
     GenerateResponseUseCase
 )
 
+from src.infrastructure.api.v1.dependencies import get_current_user
 from src.infrastructure.messaging.rabbitmq_ai_client import (
     RabbitMQAIClient
 )
@@ -18,7 +19,10 @@ class PromptRequest(BaseModel):
 
 
 @ai.post("/generate")
-def generate_text(body: PromptRequest):
+def generate_text(
+    body: PromptRequest,
+    current_user=Depends(get_current_user),
+):
 
     try:
 
@@ -29,7 +33,8 @@ def generate_text(body: PromptRequest):
         )
 
         result = use_case.execute(
-            body.prompt
+            body.prompt,
+            str(current_user.id),
         )
 
         return {

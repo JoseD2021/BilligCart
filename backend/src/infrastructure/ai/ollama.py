@@ -26,7 +26,13 @@ class OllamaClient(AIClientInterface):
             or "gemma3:270m"
         )
 
-    def generate_response(self, prompt: str) -> str:
+    def generate_response(
+        self,
+        prompt: str,
+        user_id: str | None = None,
+    ) -> str:
+        # `user_id` forma parte del contrato de AIClientInterface, pero el
+        # worker lo usa directamente y no lo necesita para llamar a Ollama.
         full_prompt = (
             "Eres un asistente especializado en la creación de menús "
             "semanales. Genera un menú para los próximos 7 días, "
