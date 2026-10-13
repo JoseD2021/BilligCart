@@ -3,8 +3,10 @@ import functools
 import logging
 import os
 
+from src.application.use_cases.persist_generated_menu import (
+    PersistGeneratedMenuUseCase,
+)
 from src.events.application.ai_event_handlers import (
-    MenuRepositories,
     on_menu_generation_completed,
     on_menu_generation_failed,
     on_menu_generation_started,
@@ -33,7 +35,7 @@ async def main() -> None:
     # inyectan en los handlers, igual que hace dependencies.py para la API.
     supabase = await create_supabase_client()
 
-    repositories = MenuRepositories(
+    use_case = PersistGeneratedMenuUseCase(
         menu=get_menu_repository(supabase),
         plato=get_plato_repository(supabase),
         ingrediente=get_ingrediente_repository(supabase),
@@ -50,7 +52,7 @@ async def main() -> None:
         MenuGenerationCompleted,
         functools.partial(
             on_menu_generation_completed,
-            repositories=repositories,
+            use_case=use_case,
         ),
     )
     registry.register(
