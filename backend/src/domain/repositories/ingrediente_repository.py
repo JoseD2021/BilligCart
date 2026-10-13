@@ -16,6 +16,10 @@ class IngredienteRepository(ABC):
         pass
     
     @abstractmethod
+    async def get_all(self) -> list[Ingrediente]:
+        pass
+
+    @abstractmethod
     async def get_by_id(self, id: int) -> Ingrediente | None:
         pass
     

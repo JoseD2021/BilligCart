@@ -70,9 +70,13 @@ async def process_message(
         try:
             request_data = json.loads(message.body.decode("utf-8"))
             prompt = request_data.get("prompt")
+            user_id = request_data.get("user_id")
 
             if not isinstance(prompt, str) or not prompt.strip():
                 raise ValueError("El prompt es obligatorio.")
+
+            if user_id is not None:
+                user_id = str(user_id)
 
             await publish_event_safely(
                 event_bus,
@@ -123,6 +127,8 @@ async def process_message(
                         request_id=request_id,
                         model=model,
                         duration_ms=duration_ms,
+                        user_id=user_id,
+                        response=generated_menu,
                     ),
                 )
 

@@ -55,6 +55,15 @@ class SupabaseIngredienteRepository(IngredienteRepository):
         )
         return res.data[0]
     
+    async def get_all(self) -> list[Ingrediente]:
+        res = (
+            await self._client.table(TABLE)
+            .select("*")
+            .execute()
+        )
+        
+        return [Ingrediente(**row) for row in res.data] if res and res.data else []
+    
     async def get_by_id(self, id: int) -> Ingrediente | None:
         res = (
             await self._client.table(TABLE)
