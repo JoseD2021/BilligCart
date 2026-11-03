@@ -20,10 +20,10 @@ async def lifespan(app: FastAPI):
     app.state.supabase = await create_supabase_client()
     yield
 
-prefix = "/api/v1"
+prefix = "/v1"
 
 def create_app() -> FastAPI:
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan, root_path="/api")
     register_error_handlers(app)
     
     app.include_router(health, prefix=prefix)
