@@ -1,8 +1,7 @@
 
 services:
   backend:
-    build:
-      context: .
+    build: .
     container_name: backend
     labels:
     - "traefik.enable=true"
@@ -26,8 +25,7 @@ services:
       - internal_network
 
   ai_worker:
-    build:
-      context: .
+    build: .
     container_name: ai_worker
     command:
       - python
@@ -49,8 +47,7 @@ services:
       - internal_network
 
   event_worker:
-    build:
-      context: .
+    build: .
     container_name: event_worker
     command:
       - python
@@ -176,6 +173,33 @@ services:
       - /tmp
     networks:
       - socket_network
+  
+  gps_service:
+    build: .
+    container_name: gps_service
+    command: >
+      uvicorn src.infrastructure.gps.app:app
+      --host 0.0.0.0 --port 8001
+      --ws-ping-interval 20 --ws-ping-timeout 20
+    restart: unless-stopped
+    env_file: .env   # RABBITMQ_URL, SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_JWT_SECRET
+    expose:
+      - "8001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal_network       # Traefik -> gps_service
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gps.rule=PathPrefix(`/ws`)"
+      - "traefik.http.routers.gps.entrypoints=web"
+      - "traefik.http.services.gps.loadbalancer.server.port=8001"
+      - "traefik.docker.network=proxy_network"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
 networks:
   internal_network:
