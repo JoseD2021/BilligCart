@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from src.domain.repositories.plato_repository import PlatoRepository
 from src.domain.entities.plato import Plato
+from src.domain.errors import InvalidRequestBodyError
 
 @dataclass(frozen=True)
 class GetPlatoByDayQuery:
@@ -11,6 +12,8 @@ class GetPlatoByDayQuery:
 class GetPlatoByDayHandler:
     def __init__(self, plato: PlatoRepository):
         self._plato = plato
-        
-    def handle(self, query: GetPlatoByDayQuery) -> list[Plato]:
-        return self._plato.get_by_menu_day(query.menu_id, query.day)
+
+    async def handle(self, query: GetPlatoByDayQuery) -> list[Plato]:
+        if not 1 <= query.day <= 7:
+            raise InvalidRequestBodyError("El día debe estar entre 1 y 7.")
+        return await self._plato.get_by_menu_day(query.menu_id, query.day)

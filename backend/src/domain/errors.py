@@ -28,18 +28,18 @@ class NoOffersFound(DomainError):
     def __init__(self, ingredient_name: str):
         super().__init__(f"No offers found for ingredient: {ingredient_name}")
         self.ingredient_name = ingredient_name
-        
+
 class IngredienteNotFound(DomainError):
     def __init__(self, ingredient_id: int):
         super().__init__(f"Ingredient with ID {ingredient_id} not found")
         self.ingredient_id = ingredient_id
-        
+
 class ScrapingError(DomainError):
-    def __init__(self, url: str, info: dict):
+    def __init__(self, url: str, info: dict | None = None):
         super().__init__(f"Error scraping URL {url}: {str(info)}")
         self.url = url
         self.info = info
-        
+
 class IngredienteRecentlyUpdated(DomainError):
     def __init__(self, ingredient_id: int, last_updated: datetime.datetime):
         super().__init__(f"Ingredient with ID {ingredient_id} was recently updated on {last_updated}")
@@ -47,4 +47,16 @@ class IngredienteRecentlyUpdated(DomainError):
         self.last_updated = last_updated
 
 class MenuGenerationError(DomainError):
+    pass
+
+
+class ResourceNotFound(DomainError):
+    pass
+
+
+class AccessDenied(DomainError):
+    pass
+
+
+class OrderNotReady(DomainError):
     pass

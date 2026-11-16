@@ -1,16 +1,17 @@
 
 const http = require("http");
 
-function createApiProxy({ prefix = "/api/", host = "127.0.0.1"} = {}) {
+function createApiProxy({ prefix = "/api/", host = "127.0.0.1", port = 8000 } = {}) {
   return function apiProxy(req, res, next) {
     if (!req.url.startsWith(prefix)) return next();
 
     const proxyReq = http.request(
       {
         host,
-        path: req.url,
+        port,
+        path: req.url.replace(/^\/api(?=\/)/, ""),
         method: req.method,
-        headers: { ...req.headers, host: `${host}` },
+        headers: { ...req.headers, host: `${host}:${port}` },
       },
       (proxyRes) => {
         res.writeHead(proxyRes.statusCode, proxyRes.headers);

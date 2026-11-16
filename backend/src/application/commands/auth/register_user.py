@@ -17,8 +17,7 @@ class RegisterUserHandler:
 
     async def handle(self, cmd: RegisterUserCommand) -> User:
         user = await self._auth.sign_up(cmd.email, cmd.password)
-        
-        # TODO: await self._events.publish(UserRegistered(user.id, user.email))
+
         # Las preferencias se deberían crear despues del evento ^ en un handler del evento
         await self._preferencias.save(Preferencias.default(user.id))
         return user

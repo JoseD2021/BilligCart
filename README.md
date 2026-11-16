@@ -5,7 +5,7 @@ BilligCart es una aplicación que genera menús semanales con inteligencia artif
 ## Tecnologías
 
 - **Backend:** Python y FastAPI.
-- **Frontend:** puerto `8081`.
+- **Frontend:** React Native con Expo, puerto `8081`.
 - **Base de datos:** Supabase.
 - **Mensajería y eventos:** RabbitMQ.
 - **Generación con IA:** Ollama.
@@ -29,7 +29,7 @@ Esta separación facilita calcular costes o estadísticas para distintos tipos d
 
 ### Builder y Director: extracción de productos de supermercados
 
-El endpoint `GET /api/v1/ingrediente/fetch/{id}` inicia el proceso de búsqueda de productos para un ingrediente.
+El endpoint autenticado `POST /api/v1/ingrediente/fetch/{id}` inicia la búsqueda de productos para un ingrediente. Como actualiza el catálogo compartido, requiere el rol `admin`.
 
 1. Se define un **Builder (scraper)** para cada supermercado compatible.
 2. Se instancia un **Director** asociado a ese Builder y se llama a `process_list(RAW_JSON)`, donde `RAW_JSON` es la respuesta recibida de la API del supermercado.
@@ -46,10 +46,11 @@ La generación del menú utiliza mensajería asíncrona y eventos para separar l
 1. El backend envía la solicitud a la cola `ai_requests` y espera la respuesta mediante `reply_to` y `correlation_id`.
 2. `ai_worker` consume la solicitud, llama a Ollama y devuelve el resultado al backend.
 3. Durante el proceso, `ai_worker` publica eventos de inicio, finalización o error de generación en el exchange `domain_events`.
-4. `event_worker` consume `MenuGenerationCompleted` y ejecuta el caso de uso que guarda el menú y sus ingredientes en Supabase.
-5. Los eventos que no se pueden procesar se derivan a la cola de mensajes fallidos (dead-letter queue) configurada en RabbitMQ.
+4. En `POST /menu/generate`, la API lee las preferencias, construye el prompt, espera la IA y persiste las 21 comidas antes de responder. El evento lleva `persist_via_events=false` para evitar guardar dos veces.
+5. La ruta anterior `POST /ai/generate` conserva la persistencia asíncrona mediante `event_worker`, con `persist_via_events=true` por defecto.
+6. Los eventos que no se pueden procesar se derivan a la cola de mensajes fallidos (dead-letter queue) configurada en RabbitMQ.
 
-Los contratos, la publicación, el registro de handlers y la integración con RabbitMQ están organizados en `src/events/`. La persistencia del menú es asíncrona, por lo que puede completarse después de que el backend haya respondido a la petición de generación.
+Los contratos, la publicación, el registro de handlers y la integración con RabbitMQ están organizados en `src/events/`. El frontend utiliza `/menu/generate` y recibe el menú persistido, sin comparar nombres ni consultar tablas de Supabase.
 
 ## Puertos y servicios
 
@@ -57,7 +58,7 @@ Los contratos, la publicación, el registro de handlers y la integración con Ra
 |---|---|---|
 | Frontend | `http://localhost:8081` | Interfaz de usuario |
 | Backend | `http://localhost:8000` | API REST |
-| Swagger | `http://localhost:8000/docs` | Documentación interactiva de la API |
+| Swagger | `http://localhost/docs` | Documentación interactiva a través de Traefik |
 | RabbitMQ AMQP | `localhost:5672` | Comunicación entre servicios |
 | Panel de RabbitMQ | `http://localhost:15672` *(solo si está habilitado el plugin y publicado el puerto)* | Administración y monitoreo |
 
@@ -78,6 +79,8 @@ El frontend utiliza Expo. Si en `frontend/package.json` aparece `"expo": "~51.0.
 1. Clona el repositorio y entra en la carpeta del proyecto.
 2. Crea un archivo `.env` usando `.env.example` como referencia.
 3. Sustituye los valores de ejemplo por tus credenciales. No subas el `.env` ni publiques claves o contraseñas reales.
+4. Ejecuta `backend/migrations/001_backend_owned_flows.sql` en el editor SQL de Supabase. Añade preferencias y pedidos y restringe el acceso directo a las tablas.
+5. Usa una clave de servidor (`service_role` o `sb_secret_...`) en `SUPABASE_KEY`. El frontend solo necesita una clave pública de Supabase Auth; las consultas de negocio usan la API.
 
 Las variables definidas en `.env.example` son:
 
@@ -140,4 +143,42 @@ npx expo start
 
 ## Generación y persistencia del menú
 
-El menú semanal contempla siete días con desayuno, almuerzo y cena: **21 platos en total**. Ollama genera el menú a través de `ai_worker`; después, `event_worker` procesa el evento de finalización y persiste los platos y sus ingredientes en Supabase. Si el menú no aparece guardado inmediatamente, revisa los registros de `ai_worker` y `event_worker`.
+El menú semanal contempla siete días con desayuno, almuerzo y cena: **21 platos en total**. Ollama genera el menú a través de `ai_worker`; la API valida y guarda el resultado antes de devolverlo al frontend. Si falla la lectura de preferencias, la generación se detiene para no omitir restricciones alimentarias.
+
+## Acceso y rutas de la aplicación
+
+Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo, pero crear, editar, borrar o actualizar precios requiere `app_metadata.role = "admin"`, asignado desde un servidor de confianza. No se utiliza `user_metadata` para conceder permisos.
+
+| Ruta relativa a `/api/v1` | Uso |
+|---|---|
+| `GET /menu/weekly` | Menú completo del usuario, con platos e ingredientes |
+| `POST /menu/generate` | Generar con preferencias y devolver el resultado persistido |
+| `GET /preferencias`, `PUT /preferencias` | Consultar y guardar las preferencias propias |
+| `GET /compras` | Ingredientes agregados del menú actual |
+| `POST /compras/confirmar` | Registrar un pedido con una copia de la lista; reintentar la misma lista no duplica el pedido |
+| `GET /pedidos/current` | Último pedido propio, o `null` |
+| `GET /pedidos/{id}/estado` | Consultar un pedido propio |
+
+Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. La confirmación requiere el menú completo y precios para todos sus ingredientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra la etapa guardada (`0` confirmado, `1` preparando, `2` en camino, `3` entregado), con repartidor y tiempo estimado solo cuando existen en la base de datos. El servicio de operación o reparto debe actualizar esos campos.
+
+La API registra método, ruta, estado, duración e identificador de solicitud, que también devuelve en `X-Request-ID`. No registra contraseñas, tokens ni cuerpos. Los detalles de errores de persistencia quedan en los logs del servidor.
+
+Se eliminaron `PUT /menu/update`, el archivo vacío `get_current_user.py`, el navegador sin uso `AppNavigator.js` y los datos demo de Compras y Pedido.
+
+## Comprobaciones
+
+Desde `backend`, con las dependencias de `requirements.txt` instaladas:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Las pruebas usan repositorios y servicios externos simulados; cubren reglas del dominio, generación, persistencia, preferencias, compras, autorización, registros de solicitudes y protección ante pedidos duplicados. No necesitan credenciales reales.
+
+Desde `frontend`:
+
+```bash
+npx expo export --platform web --output-dir dist --max-workers 1
+```
+
+El proxy web de Expo usa `BACKEND_PORT=8000` por defecto y traduce `/api/v1` a `/v1` del backend directo. Docker publica ese puerto únicamente en `127.0.0.1`. En un dispositivo móvil configura `EXPO_PUBLIC_API_URL=http://<IP-del-servidor>/api/v1` usando Traefik en el puerto 80.

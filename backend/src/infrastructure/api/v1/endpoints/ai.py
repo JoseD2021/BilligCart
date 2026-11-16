@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+import logging
 
 from src.application.use_cases.generate_response import (
     GenerateResponseUseCase
@@ -63,6 +64,7 @@ def generate_text(
         )
 
     except Exception:
+        logging.getLogger(__name__).exception("Falló la generación de IA user_id=%s", current_user.id)
 
         raise HTTPException(
             status_code=500,

@@ -6,11 +6,13 @@ import uuid
 import pika
 
 from src.domain.repositories.ai_client_interface import AIClientInterface
+from src.domain.errors import MenuGenerationError
 
 
 class RabbitMQAIClient(AIClientInterface):
 
-    def __init__(self):
+    def __init__(self, *, persist_via_events: bool = True):
+        self.persist_via_events = persist_via_events
         self.host = os.getenv("RABBITMQ_HOST", "rabbitmq")
         self.port = int(os.getenv("RABBITMQ_PORT", "5672"))
         self.user = os.getenv("RABBITMQ_USER", "billigcart")
@@ -43,7 +45,19 @@ class RabbitMQAIClient(AIClientInterface):
             retry_delay=2
         )
 
-        connection = pika.BlockingConnection(parameters)
+        try:
+            connection = pika.BlockingConnection(parameters)
+        except pika.exceptions.AMQPError as exc:
+            raise ConnectionError("No fue posible conectarse a RabbitMQ.") from exc
+        try:
+            return self._request(connection, prompt, user_id)
+        except pika.exceptions.AMQPError as exc:
+            raise ConnectionError("Se perdió la conexión con RabbitMQ.") from exc
+        finally:
+            if connection.is_open:
+                connection.close()
+
+    def _request(self, connection, prompt, user_id):
         channel = connection.channel()
 
         channel.queue_declare(
@@ -75,7 +89,8 @@ class RabbitMQAIClient(AIClientInterface):
         )
 
         message = {
-            "prompt": prompt
+            "prompt": prompt,
+            "persist_via_events": self.persist_via_events,
         }
 
         # El worker necesita el dueño del menú para incluirlo en el
@@ -100,7 +115,6 @@ class RabbitMQAIClient(AIClientInterface):
         while "data" not in response:
 
             if time.monotonic() - start_time > timeout:
-                connection.close()
                 raise TimeoutError(
                     "No se recibió respuesta del AI Worker"
                 )
@@ -109,12 +123,10 @@ class RabbitMQAIClient(AIClientInterface):
                 time_limit=1
             )
 
-        connection.close()
-
         data = response["data"]
 
         if data.get("status") == "error":
-            raise RuntimeError(
+            raise MenuGenerationError(
                 data.get(
                     "error",
                     "Error procesando solicitud de IA"

@@ -4,3 +4,4 @@ from dataclasses import dataclass
 class User:
     id: str
     email: str
+    role: str = "user"

@@ -44,4 +44,5 @@ class SupabaseAuthService(AuthService):
             raise InvalidCredentials("Token inválido o expirado")
         if res is None or res.user is None:
             raise InvalidCredentials("Token inválido o expirado")
-        return User(id=res.user.id, email=res.user.email)
+        return User(id=res.user.id, email=res.user.email,
+                    role=(res.user.app_metadata or {}).get("role", "user"))

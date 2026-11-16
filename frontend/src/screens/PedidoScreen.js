@@ -1,24 +1,29 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import Card from "../components/Card";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { api } from "../services/api";
 
 const ETAPAS = ["Confirmado", "Preparando", "En camino", "Entregado"];
 
-const PEDIDO_DEMO = { etapa: 2, repartidor: "Camilo R.", tiempoEstimado: "18 min" };
-
-export default function PedidoScreen({ pedidoId = "demo" }) {
+export default function PedidoScreen({ route }) {
+  const pedidoId = route.params?.pedidoId;
   const [pedido, setPedido] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api
-      .getEstadoPedido(pedidoId)
-      .then(setPedido)
-      .catch(() => setPedido(PEDIDO_DEMO))
-      .finally(() => setCargando(false));
+  const cargar = useCallback(() => {
+    let active = true;
+    setCargando(true);
+    setError(null);
+    const request = pedidoId ? api.getEstadoPedido(pedidoId) : api.getPedidoActual();
+    request.then((data) => { if (active) setPedido(data); })
+      .catch((e) => { if (active) setError(e.message); })
+      .finally(() => { if (active) setCargando(false); });
+    return () => { active = false; };
   }, [pedidoId]);
+  useFocusEffect(cargar);
 
   if (cargando) {
     return (
@@ -28,11 +33,21 @@ export default function PedidoScreen({ pedidoId = "demo" }) {
     );
   }
 
+  if (error || !pedido) {
+    return (
+      <View style={styles.centrado}>
+        <Text style={typography.body}>{error ?? "Aún no tienes pedidos. Confirma tu lista de compras para crear uno."}</Text>
+        <TouchableOpacity onPress={cargar}><Text style={styles.textoActivo}>Actualizar</Text></TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <Text style={typography.h1}>Tu pedido</Text>
       <Text style={[typography.bodyMuted, { marginBottom: spacing.lg }]}>
-        Repartidor: {pedido.repartidor} · Llega en {pedido.tiempoEstimado}
+        {pedido.repartidor ? `Repartidor: ${pedido.repartidor}` : "Repartidor pendiente de asignación"}
+        {pedido.tiempo_estimado ? ` · Llega en ${pedido.tiempo_estimado}` : ""}
       </Text>
 
       <Card>
@@ -46,6 +61,8 @@ export default function PedidoScreen({ pedidoId = "demo" }) {
           );
         })}
       </Card>
+      <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
+      <TouchableOpacity onPress={cargar}><Text style={styles.textoActivo}>Actualizar estado</Text></TouchableOpacity>
     </View>
   );
 }

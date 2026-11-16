@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import unicodedata
-from dataclasses import dataclass
 
 from src.application.commands.ingrediente.create_ingrediente import (
     CreateIngredientCommand,
@@ -41,6 +40,7 @@ from src.application.queries.plato.get_plato_by_day import (
     GetPlatoByDayHandler,
     GetPlatoByDayQuery,
 )
+from src.domain.entities.ai_response import GeneratedDish as _PlatoGenerado, GeneratedIngredient as _IngredienteGenerado
 from src.domain.entities.plato import Plato
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
 from src.domain.enums.plato_tipo import PlatoTipo
@@ -65,23 +65,6 @@ MOMENTOS = (
 COMIDAS_POR_SEMANA = len(DIAS) * len(MOMENTOS)
 TAMANO_LOTE = 50
 CONCURRENCIA = 6
-
-
-# Estructuras con los campos que devuelve la IA, normalizadas al dominio.
-@dataclass(frozen=True)
-class _IngredienteGenerado:
-    clave: str
-    nombre: str
-    cantidad: float
-    unidad: str
-
-
-@dataclass(frozen=True)
-class _PlatoGenerado:
-    day: int
-    tipo: PlatoTipo
-    nombre: str
-    ingredientes: list[_IngredienteGenerado]
 
 
 class PersistGeneratedMenuUseCase:
@@ -176,7 +159,7 @@ class PersistGeneratedMenuUseCase:
                 fila = await self._create_ingrediente.handle(
                     CreateIngredientCommand(name=nombre)
                 )
-                fila_id = _fila_id(fila)
+                fila_id = fila.id
                 if fila_id is None:
                     raise MenuGenerationError(
                         "No se pudo guardar un ingrediente."
@@ -283,14 +266,6 @@ class PersistGeneratedMenuUseCase:
 
         if fallo is not None:
             raise fallo
-
-
-def _fila_id(fila) -> int | None:
-    if fila is None:
-        return None
-    if isinstance(fila, dict):
-        return fila.get("id")
-    return getattr(fila, "id", None)
 
 
 def _sin_acentos(valor) -> str:
@@ -405,7 +380,7 @@ def _interpretar_menu(raw) -> list[_PlatoGenerado]:
                     _IngredienteGenerado(
                         clave=clave_ing,
                         nombre=_capitalizar(nombre_ing),
-                        cantidad=cantidad if cantidad > 0 else 1,
+                        cantidad=cantidad,
                         unidad=unidad,
                     )
                 )

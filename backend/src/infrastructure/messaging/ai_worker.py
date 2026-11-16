@@ -129,6 +129,7 @@ async def process_message(
                         duration_ms=duration_ms,
                         user_id=user_id,
                         response=generated_menu,
+                        persist_via_events=request_data.get("persist_via_events", True),
                     ),
                 )
 

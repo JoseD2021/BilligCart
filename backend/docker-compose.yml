@@ -5,11 +5,10 @@ services:
     container_name: backend
     labels:
     - "traefik.enable=true"
-    - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
     - "traefik.http.routers.backend.entrypoints=web"
     - "traefik.http.routers.backend.rule=PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi`)"
     - "traefik.http.services.backend.loadbalancer.server.port=8000"
-    - "traefik.http.routers.api.middlewares=api-strip"
+    - "traefik.http.routers.backend.middlewares=api-strip"
     - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
     volumes:
       - .:/app,z
@@ -17,6 +16,8 @@ services:
       - .env
     environment:
       PORT: "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -54,7 +55,7 @@ services:
       - -m
       - src.events.run_ai_events_worker
     volumes:
-      - .:/app,z
+      - .:/app
     env_file:
       - .env
     restart: unless-stopped
@@ -96,15 +97,9 @@ services:
       - ollama:/root/.ollama
     networks:
       - internal_network
-    
+
     # Configuracion para GPU
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+           
 
   ollama-init:
     image: curlimages/curl:latest
@@ -140,7 +135,7 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.endpoint=tcp://socket-proxy:2375"
       - "--entrypoints.web.address=:80"
-    
+
     ports:
       - "80:80"
     security_opt:
@@ -173,7 +168,7 @@ services:
       - /tmp
     networks:
       - socket_network
-  
+
   gps_service:
     build: .
     container_name: gps_service
@@ -209,4 +204,3 @@ networks:
 
 volumes:
   ollama:
-  

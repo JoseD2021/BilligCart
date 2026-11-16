@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
 
   function aplicarSesion(s) {
     setSession(s);
-    // Token para las llamadas que aún van al backend (p. ej. confirmar compra).
+    // Supabase gestiona Auth; todas las consultas de negocio pasan por la API.
     setAuthToken(s?.access_token ?? null);
   }
 

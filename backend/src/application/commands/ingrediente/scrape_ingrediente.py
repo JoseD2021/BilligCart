@@ -1,6 +1,7 @@
 import asyncio
 
-from realtime import dataclass
+from dataclasses import dataclass
+import logging
 from datetime import datetime, timezone
 
 from src.domain.repositories.ingrediente_repository import IngredienteRepository
@@ -17,7 +18,7 @@ class ScrapeIngredienteCommand:
 
 class ScrapeIngredienteHandler:
     _DAYS_TO_UPDATE = 7
-    
+
     def __init__(self, ingr: IngredienteRepository, fetcher: Fetcher, builders: list[ScraperBuilder], update_fetch: UpdateFetchIngredientHandler):
         self._ingr = ingr
         self._fetcher = fetcher
@@ -28,10 +29,10 @@ class ScrapeIngredienteHandler:
         ing = await self._ingr.get_by_id(cmd.id)
         if ing is None:
             raise IngredienteNotFound(cmd.id)
-        
+
         if ing.last_updated is not None and ing.shop is not None:
-            lastUpdateDiff = datetime.strptime(ing.last_updated, "%Y-%m-%dT%H:%M:%S.%f%z") - datetime.now(timezone.utc)
-            
+            lastUpdateDiff = datetime.now(timezone.utc) - ing.last_updated
+
             if lastUpdateDiff.days < self._DAYS_TO_UPDATE:
                 raise IngredienteRecentlyUpdated(cmd.id, ing.last_updated)
 
@@ -51,9 +52,9 @@ class ScrapeIngredienteHandler:
         try:
             b: ScraperBuilder = builder()
             raw = await self._fetcher.fetch(b.url_search(termino=termino, limit=limit))
-            
+
             return DirectorScraping(builder).process_list(raw)
         except ScrapingError as e:
-            print(f"Error al buscar en {builder.__class__.__name__}: {e}")
+            logging.getLogger(__name__).warning("Error al buscar ofertas con %s: %s", builder.__name__, e)
 
             return []

@@ -1,34 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { api } from "../services/api";
-import { useAuth } from "../context/AuthContext";
 
-const LISTA_DEMO = {
-  presupuesto: 150000,
-  total: 132500,
-  items: [
-    { id: "1", nombre: "Arroz 1kg", supermercado: "D1", precio: 4200, comprado: false },
-    { id: "2", nombre: "Lentejas 500g", supermercado: "Éxito", precio: 5100, comprado: false },
-    { id: "3", nombre: "Pechuga de pollo 1kg", supermercado: "Éxito", precio: 15900, comprado: true },
-    { id: "4", nombre: "Tomate x kg", supermercado: "D1", precio: 3200, comprado: false },
-    { id: "5", nombre: "Pasta integral 500g", supermercado: "Ara", precio: 4800, comprado: false },
-  ],
-};
-
-export default function ListaComprasScreen() {
-  const { usuario } = useAuth();
-  const usuarioId = usuario?.id || "demo";
+export default function ListaComprasScreen({ navigation }) {
   const [lista, setLista] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
 
-  useEffect(() => {
-    api
-      .getListaDeCompras(usuarioId)
-      .then(setLista)
-      .catch(() => setLista(LISTA_DEMO))
-      .finally(() => setCargando(false));
-  }, [usuarioId]);
+  const cargar = useCallback(() => {
+    let active = true;
+    setCargando(true);
+    setError(null);
+    api.getListaDeCompras()
+      .then((data) => { if (active) setLista(data); })
+      .catch((e) => { if (active) setError(e.message); })
+      .finally(() => { if (active) setCargando(false); });
+    return () => { active = false; };
+  }, []);
+  useFocusEffect(cargar);
 
   if (cargando) {
     return (
@@ -38,14 +30,29 @@ export default function ListaComprasScreen() {
     );
   }
 
-  const excedePresupuesto = lista.total > lista.presupuesto;
+  if (error || !lista?.items?.length) {
+    return (
+      <View style={styles.centrado}>
+        <Text style={typography.body}>{error ?? "Genera un menú para ver tu lista de compras."}</Text>
+        <TouchableOpacity onPress={cargar} style={styles.botonConfirmar}>
+          <Text style={styles.botonConfirmarTexto}>Actualizar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const excedePresupuesto = lista.presupuesto > 0 && lista.total > lista.presupuesto;
 
   async function confirmar() {
+    if (confirmando) return;
+    setConfirmando(true);
     try {
-      await api.confirmarCompra(usuarioId);
-      Alert.alert("Pedido confirmado", "Un repartidor será asignado en breve.");
+      const pedido = await api.confirmarCompra();
+      navigation.navigate("Pedido", { pedidoId: pedido.id });
     } catch (e) {
-      Alert.alert("No se pudo confirmar", "Intenta de nuevo en unos minutos.");
+      Alert.alert("No se pudo confirmar", e.message);
+    } finally {
+      setConfirmando(false);
     }
   }
 
@@ -55,16 +62,22 @@ export default function ListaComprasScreen() {
         <Text style={typography.h1}>Lista de compras</Text>
         <View style={styles.resumen}>
           <View>
-            <Text style={typography.label}>TOTAL ESTIMADO</Text>
+            <Text style={typography.label}>TOTAL DE REFERENCIA</Text>
             <Text style={[typography.price, excedePresupuesto && { color: colors.warning }]}>
               ${lista.total.toLocaleString("es-CO")}
             </Text>
           </View>
           <View>
             <Text style={typography.label}>PRESUPUESTO</Text>
-            <Text style={typography.bodyMuted}>${lista.presupuesto.toLocaleString("es-CO")}</Text>
+            <Text style={typography.bodyMuted}>{lista.presupuesto ? `$${lista.presupuesto.toLocaleString("es-CO")}` : "Sin definir"}</Text>
           </View>
         </View>
+        <Text style={[typography.bodyMuted, { marginTop: spacing.sm }]}>
+          Precios de referencia de los productos encontrados. El costo final depende de la presentación y la cantidad comprada.
+        </Text>
+        {lista.precios_pendientes > 0 && (
+          <Text style={styles.avisoTexto}>Faltan precios para {lista.precios_pendientes} ingredientes.</Text>
+        )}
         {excedePresupuesto && (
           <View style={styles.avisoPresupuesto}>
             <Text style={styles.avisoTexto}>
@@ -80,19 +93,19 @@ export default function ListaComprasScreen() {
         contentContainerStyle={{ padding: spacing.lg }}
         renderItem={({ item }) => (
           <View style={styles.fila}>
-            <View style={[styles.check, item.comprado && styles.checkActivo]} />
             <View style={{ flex: 1 }}>
-              <Text style={[typography.body, item.comprado && styles.tachado]}>{item.nombre}</Text>
-              <Text style={typography.bodyMuted}>{item.supermercado}</Text>
+              <Text style={typography.body}>{item.nombre}</Text>
+              <Text style={typography.bodyMuted}>{item.cantidad} {item.unidad} · {item.supermercado ?? "Sin cotizar"}</Text>
             </View>
-            <Text style={typography.price}>${item.precio.toLocaleString("es-CO")}</Text>
+            <Text style={typography.price}>{item.precio == null ? "Pendiente" : `$${item.precio.toLocaleString("es-CO")}`}</Text>
           </View>
         )}
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.botonConfirmar} onPress={confirmar}>
-          <Text style={styles.botonConfirmarTexto}>Confirmar y pagar</Text>
+        <TouchableOpacity style={[styles.botonConfirmar, (!lista.puede_confirmar || confirmando) && { opacity: 0.5 }]}
+          onPress={confirmar} disabled={!lista.puede_confirmar || confirmando}>
+          <Text style={styles.botonConfirmarTexto}>{confirmando ? "Confirmando..." : "Confirmar pedido"}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -127,16 +140,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  check: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: colors.border,
-    marginRight: spacing.md,
-  },
-  checkActivo: { backgroundColor: colors.primary, borderColor: colors.primary },
-  tachado: { textDecorationLine: "line-through", color: colors.textMuted },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
   botonConfirmar: {
     backgroundColor: colors.accent,

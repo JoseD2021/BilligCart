@@ -42,7 +42,7 @@ from src.infrastructure.supabase.auth_service import SupabaseAuthService
 from src.domain.errors import InvalidCredentials
 from src.domain.entities.user import User
 
-bearer = HTTPBearer()
+bearer = HTTPBearer(auto_error=False)
 
 # ------- Supabase -------------
 # Separado para que los repositorios se puedan construir también fuera de
@@ -54,17 +54,19 @@ def get_supabase_client(request: Request) -> AsyncClient:
 # ------- Auth / User -------------
 
 def get_auth_service(request: Request) -> AuthService:
-    return SupabaseAuthService(request.app.state.supabase)
+    return SupabaseAuthService(request.app.state.auth_supabase)
 
 async def get_current_user(
-    creds: HTTPAuthorizationCredentials = Depends(bearer),
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer),
     auth: AuthService = Depends(get_auth_service),
 ) -> User:
+    if creds is None:
+        raise HTTPException(401, "Se requiere autenticación", headers={"WWW-Authenticate": "Bearer"})
     try:
         return await auth.get_user_from_token(creds.credentials)
     except InvalidCredentials:
-        raise HTTPException(401, "Token inválido")
-    
+        raise HTTPException(401, "Token inválido", headers={"WWW-Authenticate": "Bearer"})
+
 def get_preferencias_repository(
     request: Request
 ) -> PreferenciasRepository:
@@ -149,9 +151,13 @@ def get_update_fetch_ingredient_handler(
 ) -> UpdateFetchIngredientHandler:
     return UpdateFetchIngredientHandler(ingr)
 
-def get_fetcher() -> Fetcher:
-    return HttpxFetcher()
-    
+async def get_fetcher():
+    fetcher = HttpxFetcher()
+    try:
+        yield fetcher
+    finally:
+        await fetcher.aclose()
+
 
 def get_scraper_builders() -> list:
     from src.infrastructure.scrapers.scraper_olimpica import ScraperOlimpica
@@ -218,3 +224,49 @@ def get_get_plato_ingrediente_by_plato_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
 ) -> "GetPlatoIngredienteByPlatoIdHandler":
     return GetPlatoIngredienteByPlatoIdHandler(pltingr)
+
+
+def get_access_policy(
+    menus=Depends(get_menu_repository), platos=Depends(get_plato_repository),
+    relaciones=Depends(get_plato_ingrediente_repository),
+):
+    from src.application.access_policy import AccessPolicy
+    return AccessPolicy(menus, platos, relaciones)
+
+
+def get_preferences_use_case(repository=Depends(get_preferencias_repository)):
+    from src.application.use_cases.preferences import PreferencesUseCase
+    return PreferencesUseCase(repository)
+
+
+def get_weekly_menu(
+    menus=Depends(get_menu_repository), platos=Depends(get_plato_repository),
+    ingredientes=Depends(get_ingrediente_repository), relaciones=Depends(get_plato_ingrediente_repository),
+):
+    from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
+    return GetWeeklyMenu(menus, platos, ingredientes, relaciones)
+
+
+def get_generate_weekly_menu(
+    preferences=Depends(get_preferences_use_case), weekly=Depends(get_weekly_menu),
+    menus=Depends(get_menu_repository), platos=Depends(get_plato_repository),
+    ingredientes=Depends(get_ingrediente_repository), relaciones=Depends(get_plato_ingrediente_repository),
+):
+    from src.application.use_cases.generate_weekly_menu import GenerateWeeklyMenu
+    from src.application.use_cases.persist_generated_menu import PersistGeneratedMenuUseCase
+    from src.infrastructure.messaging.rabbitmq_ai_client import RabbitMQAIClient
+    return GenerateWeeklyMenu(preferences, RabbitMQAIClient(persist_via_events=False),
+                              PersistGeneratedMenuUseCase(menus, platos, ingredientes, relaciones), weekly)
+
+
+def get_pedido_repository(client: AsyncClient = Depends(get_supabase_client)):
+    from src.infrastructure.supabase.repositories.pedido_repository import SupabasePedidoRepository
+    return SupabasePedidoRepository(client)
+
+
+def get_shopping_use_case(
+    weekly=Depends(get_weekly_menu), preferences=Depends(get_preferences_use_case),
+    orders=Depends(get_pedido_repository),
+):
+    from src.application.use_cases.shopping import ShoppingUseCase
+    return ShoppingUseCase(weekly, preferences, orders)
