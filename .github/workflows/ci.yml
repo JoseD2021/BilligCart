@@ -15,7 +15,6 @@ permissions:
   contents: read
 
 env:
-  # Nombre del servicio principal en backend/docker-compose.yml
   BACKEND_SERVICE: backend
   IMAGE_NAME: ghcr.io/${{ github.repository }}/backend
 
@@ -46,6 +45,10 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # El compose exige estas variables (${VAR:?}) incluso para `docker compose build`
+      RABBITMQ_USER: ci
+      RABBITMQ_PASSWORD: ci
     defaults:
       run:
         working-directory: backend
@@ -58,20 +61,37 @@ jobs:
 
       - name: Crear .env a partir del ejemplo (si existe)
         run: |
-          if [ -f .env-example ] && [ ! -f .env ]; then cp .env-example .env; fi
+          if [ -f env-example ] && [ ! -f .env ]; then cp env-example .env; fi
 
-      - name: Build de imágenes
+      - name: Build de imágenes (compose)
         run: docker compose build
 
+      - name: Build de la imagen de pruebas (stage test)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          target: test
+          load: true
+          push: false
+          tags: backend-test:ci
+          cache-from: type=gha,scope=backend-test
+          cache-to: type=gha,scope=backend-test,mode=max
+
+      # Ruff corre en el runner: no hace falta tenerlo dentro de la imagen
       - name: Lint (ruff)
-        run: docker compose run --rm --no-deps ${{ env.BACKEND_SERVICE }} ruff check .
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: backend
+          args: check
 
       - name: Tests (pytest)
         run: |
           mkdir -p reports
           # pytest devuelve 5 cuando no encuentra tests; lo toleramos por ahora
           set +e
-          docker compose run --rm ${{ env.BACKEND_SERVICE }} \
+          docker run --rm \
+            -v "$PWD/reports:/app/reports" \
+            backend-test:ci \
             pytest -q --junitxml=reports/junit.xml
           code=$?
           if [ "$code" -eq 5 ]; then
@@ -155,6 +175,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: backend
+          target: production
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
