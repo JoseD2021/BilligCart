@@ -1,5 +1,6 @@
 import datetime
 
+
 class DomainError(Exception):
     def __init__(self, message: str = ""):
         super().__init__(message)
@@ -36,7 +37,7 @@ class IngredienteNotFound(DomainError):
         
 class ScrapingError(DomainError):
     def __init__(self, url: str, info: dict):
-        super().__init__(f"Error scraping URL {url}: {str(info)}")
+        super().__init__(f"Error scraping URL {url}: {info!s}")
         self.url = url
         self.info = info
         
@@ -48,3 +49,6 @@ class IngredienteRecentlyUpdated(DomainError):
 
 class MenuGenerationError(DomainError):
     pass
+
+class AIServiceError(Exception):
+    """El servicio de IA no pudo procesar la solicitud."""

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
 from src.domain.entities.user import User
+
 
 @dataclass(frozen=True)
 class AuthSession:

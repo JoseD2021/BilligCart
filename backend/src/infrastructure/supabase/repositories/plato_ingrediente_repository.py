@@ -1,7 +1,9 @@
 from supabase import AsyncClient
 
-from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
+from src.domain.repositories.plato_ingrediente_repository import (
+    PlatoIngredienteRepository,
+)
 
 TABLE = "PlatoIngrediente"
 

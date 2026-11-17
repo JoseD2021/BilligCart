@@ -1,9 +1,7 @@
 from supabase import AsyncClient
-from postgrest.exceptions import APIError
 
-from src.domain.errors import InvalidRequestBodyError
-from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.entities.plato import Plato
+from src.domain.errors import InvalidRequestBodyError
 from src.domain.repositories.plato_repository import PlatoRepository
 
 TABLE = "Plato"

@@ -1,10 +1,11 @@
-from dataclasses import dataclass
 import datetime
+from dataclasses import dataclass
 
 from src.domain.entities.ingrediente import Ingrediente, IngredienteFetchInfo
 from src.domain.enums.tienda import Tienda
-from src.domain.repositories.ingrediente_repository import IngredienteRepository
 from src.domain.errors import InvalidRequestBodyError
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+
 
 @dataclass(frozen=True)
 class UpdateFetchIngredientCommand:
@@ -24,7 +25,7 @@ class UpdateFetchIngredientHandler:
             shop=cmd.shop,
             price=cmd.price,
             url=cmd.url,
-            fetched_at=datetime.datetime.now(datetime.timezone.utc),
+            fetched_at=datetime.datetime.now(datetime.UTC),
         )
         
         if fetch_info.price < 0:

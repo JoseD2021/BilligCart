@@ -1,8 +1,9 @@
-from dataclasses import dataclass
 import datetime
+from dataclasses import dataclass
 
 from src.domain.entities.ingrediente import Ingrediente
 from src.domain.repositories.ingrediente_repository import IngredienteRepository
+
 
 @dataclass(frozen=True)
 class UpdateIngredientCommand:
@@ -18,7 +19,7 @@ class UpdateIngredientHandler:
         ingrediente = Ingrediente(
             id=cmd.id,
             name=cmd.name,
-            last_updated=datetime.datetime.now(datetime.timezone.utc),
+            last_updated=datetime.datetime.now(datetime.UTC),
             
             # estos son ignorados pero son necesarios para crear el objeto Ingrediente
             shop=None,

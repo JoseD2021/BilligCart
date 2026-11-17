@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, Query
 from datetime import date
+
+from fastapi import APIRouter, Depends
 
 from src.application.commands.menu.create_menu import CreateMenuCommand
 from src.application.queries.menu.get_current_menu import GetCurrentMenuQuery
 from src.application.queries.menu.get_menu_by_date import GetMenuByDateQuery
-from src.infrastructure.api.v1.dependencies import get_current_user, get_create_menu_handler, get_current_menu_handler, get_menu_by_date_handler
+from src.infrastructure.api.v1.dependencies import (
+    get_create_menu_handler,
+    get_current_menu_handler,
+    get_current_user,
+    get_menu_by_date_handler,
+)
 from src.infrastructure.api.v1.schemas.menu import UpdateMenuBody
 
 router = APIRouter(prefix="/menu", tags=["Menu"])

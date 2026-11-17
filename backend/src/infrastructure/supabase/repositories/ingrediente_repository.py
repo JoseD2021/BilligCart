@@ -3,7 +3,6 @@ from supabase import AsyncClient
 from src.domain.entities.ingrediente import Ingrediente, IngredienteFetchInfo
 from src.domain.repositories.ingrediente_repository import IngredienteRepository
 
-
 TABLE = "Ingrediente"
 
 class SupabaseIngredienteRepository(IngredienteRepository):

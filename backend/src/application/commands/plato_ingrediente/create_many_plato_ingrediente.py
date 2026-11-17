@@ -1,8 +1,12 @@
-from dataclasses import dataclass
 
-from src.application.commands.plato_ingrediente.create_plato_ingrediente import CreatePlatoIngredienteRecetaCommand
+from src.application.commands.plato_ingrediente.create_plato_ingrediente import (
+    CreatePlatoIngredienteRecetaCommand,
+)
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
-from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
+from src.domain.repositories.plato_ingrediente_repository import (
+    PlatoIngredienteRepository,
+)
+
 
 class CreateManyPlatoIngredienteCommandHandler:
     def __init__(self, plt_ingr: PlatoIngredienteRepository):

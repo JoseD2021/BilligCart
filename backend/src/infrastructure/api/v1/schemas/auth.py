@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 
+
 class RegisterBody(BaseModel):
     email: EmailStr
     password: str

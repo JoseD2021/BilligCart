@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from src.domain.entities.plato import Plato
 
+
 class PlatoRepository(ABC):
     @abstractmethod
     async def create(self, plato: Plato) -> Plato:

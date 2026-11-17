@@ -8,6 +8,9 @@ from uuid import UUID
 from src.events.contracts.base_event import BaseEvent
 
 
+class InvalidEventMessageError(ValueError):
+    """El mensaje recibido no cumple el formato del contrato de eventos."""
+
 def _json_default(value: Any) -> Any:
     """Convierte tipos comunes de Python a valores JSON."""
 
@@ -41,7 +44,7 @@ class EventEnvelope:
     version: int = 1
 
     @classmethod
-    def from_event(cls, event: BaseEvent) -> "EventEnvelope":
+    def from_event(cls, event: BaseEvent) -> EventEnvelope:
         return cls(
             event_id=event.event_id,
             event_type=event.event_type,
@@ -61,16 +64,16 @@ class EventEnvelope:
     def from_json(
         cls,
         body: bytes | str,
-    ) -> "EventEnvelope":
+    ) -> EventEnvelope:
         raw = json.loads(body)
 
         if not isinstance(raw, dict):
-            raise ValueError("El mensaje del evento debe ser un objeto JSON.")
+            raise InvalidEventMessageError("El mensaje del evento debe ser un objeto JSON.")
 
         payload = raw.get("payload")
 
         if not isinstance(payload, dict):
-            raise ValueError("El payload del evento debe ser un objeto JSON.")
+            raise InvalidEventMessageError("El payload del evento debe ser un objeto JSON.")
 
         return cls(
             event_id=str(raw["event_id"]),

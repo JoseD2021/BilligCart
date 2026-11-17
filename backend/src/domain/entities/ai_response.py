@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+
 class ingredientsSchema(BaseModel):
     name: str = Field(..., description="Nombre del ingrediente") 
     cantidad: float = Field(..., description="Cantidad de ingrediente necesaria por unidad")

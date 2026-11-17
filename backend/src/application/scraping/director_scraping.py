@@ -1,6 +1,7 @@
 from src.application.interfaces.scraper_builder import ScraperBuilder
 from src.domain.entities.ingrediente import Ingrediente
 
+
 class DirectorScraping:
     def __init__(self, builder: ScraperBuilder):
         self._builder = builder
