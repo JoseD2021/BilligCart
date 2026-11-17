@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from postgrest import APIError
 
 from src.domain.errors import (
+    AIServiceError,
     DomainError,
     EmailAlreadyRegistered,
     IngredienteRecentlyUpdated,
@@ -45,4 +46,10 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=500,
             content={"error": "InternalError", "message": "Hubo un error inesperado en el servidor."},
         )
-        
+
+    @app.exception_handler(AIServiceError)
+    async def ai_service_error_handler(request: Request, exc: Exception):
+        return JSONResponse(
+            status_code=502, 
+            content={"detail": "El servicio de IA no está disponible."}
+        )

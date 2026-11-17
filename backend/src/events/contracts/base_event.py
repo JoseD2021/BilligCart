@@ -55,14 +55,14 @@ class BaseEvent:
         *,
         event_id: str,
         occurred_at: str,
-    ) -> "BaseEvent":
+    ) -> BaseEvent:
         """
         Reconstruye un evento a partir del mensaje recibido.
         Los eventos con campos complejos pueden sobrescribir
         este método para controlar su deserialización.
         """
         timestamp = datetime.fromisoformat(
-            occurred_at.replace("Z", "+00:00")
+            occurred_at
         )
 
         if timestamp.tzinfo is None:

@@ -49,3 +49,6 @@ class IngredienteRecentlyUpdated(DomainError):
 
 class MenuGenerationError(DomainError):
     pass
+
+class AIServiceError(Exception):
+    """El servicio de IA no pudo procesar la solicitud."""

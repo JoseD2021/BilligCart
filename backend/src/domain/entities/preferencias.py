@@ -7,5 +7,5 @@ class Preferencias:
     id: int | None = None  # lo asigna la db
     
     @classmethod
-    def default(cls, user_id: str) -> "Preferencias":
+    def default(cls, user_id: str) -> Preferencias:
         return cls(user_id=user_id)

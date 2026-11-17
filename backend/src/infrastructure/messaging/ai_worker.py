@@ -142,7 +142,7 @@ async def process_message(
                     duration_ms,
                 )
 
-        except Exception as exc:
+        except Exception as exc: # noqa: BLE001 - el worker no debe caerse por un mensaje malo
             await publish_event_safely(
                 event_bus,
                 MenuGenerationFailed(

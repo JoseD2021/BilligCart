@@ -239,20 +239,20 @@ def get_update_plato_ingrediente_handler(
 
 def get_delete_plato_ingrediente_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "DeletePlatoIngredienteHandler":
+) -> DeletePlatoIngredienteHandler:
     return DeletePlatoIngredienteHandler(pltingr)
 
 def get_delete_plato_ingrediente_by_plato_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "DeletePlatoIngredienteByPlatoIdHandler":
+) -> DeletePlatoIngredienteByPlatoIdHandler:
     return DeletePlatoIngredienteByPlatoIdHandler(pltingr)
 
 def get_get_plato_ingrediente_by_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "GetPlatoIngredienteByIdHandler":
+) -> GetPlatoIngredienteByIdHandler:
     return GetPlatoIngredienteByIdHandler(pltingr)
 
 def get_get_plato_ingrediente_by_plato_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "GetPlatoIngredienteByPlatoIdHandler":
+) -> GetPlatoIngredienteByPlatoIdHandler:
     return GetPlatoIngredienteByPlatoIdHandler(pltingr)

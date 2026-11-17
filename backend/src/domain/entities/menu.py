@@ -10,7 +10,7 @@ class Menu:
     created_at: datetime.date | None = None
     
     @classmethod
-    def default(cls, user_id: str) -> "Menu":
+    def default(cls, user_id: str) -> Menu:
         today = datetime.datetime.now(datetime.UTC)
 
         # calc lunes a las 00:00

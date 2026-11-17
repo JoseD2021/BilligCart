@@ -23,5 +23,5 @@ class Ingrediente:
     id: int | None = None
     
     @classmethod
-    def default(cls, name: str) -> "Ingrediente":
+    def default(cls, name: str) -> Ingrediente:
         return cls(name=name, last_updated=datetime.datetime.now(datetime.UTC), shop=None, price=None, url=None)
