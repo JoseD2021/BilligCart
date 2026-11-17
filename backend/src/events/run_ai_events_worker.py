@@ -26,7 +26,6 @@ from src.infrastructure.api.v1.dependencies import (
 )
 from src.infrastructure.supabase.client import create_supabase_client
 
-
 logging.basicConfig(level=logging.INFO)
 
 

@@ -1,9 +1,16 @@
 from typing import Any
 
+from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
+
 from src.application.interfaces.auth_service import AuthService, AuthSession
 from src.domain.entities.user import User
-from src.domain.errors import InvalidCredentials, EmailAlreadyRegistered, InvalidEmail, WeakPassword
-from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
+from src.domain.errors import (
+    EmailAlreadyRegistered,
+    InvalidCredentials,
+    InvalidEmail,
+    WeakPassword,
+)
+
 
 class SupabaseAuthService(AuthService):
     def __init__(self, client: Any):

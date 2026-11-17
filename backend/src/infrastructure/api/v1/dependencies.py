@@ -1,46 +1,84 @@
 from fastapi import Depends, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import AsyncClient
 
-from src.infrastructure.scrapers.scraper_exito import ScraperExito
-from src.infrastructure.http.httpx_fetcher import HttpxFetcher
-from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteHandler
-from src.application.interfaces.fetcher import Fetcher
-from src.application.interfaces.auth_service import AuthService
 from src.application.commands.auth.login_user import LoginUserHandler
 from src.application.commands.auth.register_user import RegisterUserHandler
+from src.application.commands.ingrediente.create_ingrediente import (
+    CreateIngredientHandler,
+)
+from src.application.commands.ingrediente.delete_ingrediente_by_id import (
+    DeleteIngredientHandler,
+)
+from src.application.commands.ingrediente.scrape_ingrediente import (
+    ScrapeIngredienteHandler,
+)
+from src.application.commands.ingrediente.update_fetch_ingrediente import (
+    UpdateFetchIngredientHandler,
+)
+from src.application.commands.ingrediente.update_ingrediente import (
+    UpdateIngredientHandler,
+)
 from src.application.commands.menu.create_menu import CreateMenuHandler
+from src.application.commands.plato.create_plato import CreatePlatoHandler
+from src.application.commands.plato.delete_plato_by_id import DeletePlatoHandler
+from src.application.commands.plato.update_plato import UpdatePlatoHandler
+from src.application.commands.plato_ingrediente.create_many_plato_ingrediente import (
+    CreateManyPlatoIngredienteCommandHandler,
+)
+from src.application.commands.plato_ingrediente.create_plato_ingrediente import (
+    CreatePlatoIngredienteCommandHandler,
+)
+from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_id import (
+    DeletePlatoIngredienteHandler,
+)
+from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import (
+    DeletePlatoIngredienteByPlatoIdHandler,
+)
+from src.application.commands.plato_ingrediente.update_plato_ingrediente import (
+    UpdatePlatoIngredienteCommandHandler,
+)
+from src.application.interfaces.auth_service import AuthService
+from src.application.interfaces.fetcher import Fetcher
+from src.application.queries.ingrediente.get_ingrediente_by_id import (
+    GetIngredientByIdHandler,
+)
 from src.application.queries.menu.get_current_menu import GetCurrentMenuHandler
 from src.application.queries.menu.get_menu_by_date import GetMenuByDateHandler
-from src.application.commands.plato.create_plato import CreatePlatoHandler
-from src.application.commands.plato.update_plato import UpdatePlatoHandler
 from src.application.queries.plato.get_plato_by_day import GetPlatoByDayHandler
-from src.application.commands.plato.delete_plato_by_id import DeletePlatoHandler
-from src.application.commands.ingrediente.create_ingrediente import CreateIngredientHandler
-from src.application.commands.ingrediente.delete_ingrediente_by_id import DeleteIngredientHandler
-from src.application.commands.ingrediente.update_ingrediente import UpdateIngredientHandler
-from src.application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientHandler
-from src.application.queries.ingrediente.get_ingrediente_by_id import GetIngredientByIdHandler
-from src.application.commands.plato_ingrediente.create_many_plato_ingrediente import CreateManyPlatoIngredienteCommandHandler
-from src.application.commands.plato_ingrediente.update_plato_ingrediente import UpdatePlatoIngredienteCommandHandler
-from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_id import DeletePlatoIngredienteHandler
-from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import DeletePlatoIngredienteByPlatoIdHandler
-from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import GetPlatoIngredienteByPlatoIdHandler
-from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_id import GetPlatoIngredienteByIdHandler
-from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
-from src.infrastructure.supabase.repositories.plato_ingrediente_repository import SupabasePlatoIngredienteRepository
-from src.application.commands.plato_ingrediente.create_plato_ingrediente import CreatePlatoIngredienteCommandHandler
-from src.domain.repositories.ingrediente_repository import IngredienteRepository
-from src.infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
-from src.domain.repositories.plato_repository import PlatoRepository
-from src.domain.repositories.menu_repository import MenuRepository
-from src.infrastructure.supabase.repositories.menu_repository import SupabaseMenuRepository
-from src.domain.repositories.preferencias_repository import PreferenciasRepository
-from src.infrastructure.supabase.repositories.preferencias_repository import SupabasePreferenciasRepository
-from src.infrastructure.supabase.repositories.ingrediente_repository import SupabaseIngredienteRepository
-from src.infrastructure.supabase.auth_service import SupabaseAuthService
-from src.domain.errors import InvalidCredentials
+from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_id import (
+    GetPlatoIngredienteByIdHandler,
+)
+from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import (
+    GetPlatoIngredienteByPlatoIdHandler,
+)
 from src.domain.entities.user import User
+from src.domain.errors import InvalidCredentials
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+from src.domain.repositories.menu_repository import MenuRepository
+from src.domain.repositories.plato_ingrediente_repository import (
+    PlatoIngredienteRepository,
+)
+from src.domain.repositories.plato_repository import PlatoRepository
+from src.domain.repositories.preferencias_repository import PreferenciasRepository
+from src.infrastructure.http.httpx_fetcher import HttpxFetcher
+from src.infrastructure.scrapers.scraper_exito import ScraperExito
+from src.infrastructure.supabase.auth_service import SupabaseAuthService
+from src.infrastructure.supabase.repositories.ingrediente_repository import (
+    SupabaseIngredienteRepository,
+)
+from src.infrastructure.supabase.repositories.menu_repository import (
+    SupabaseMenuRepository,
+)
+from src.infrastructure.supabase.repositories.plato_ingrediente_repository import (
+    SupabasePlatoIngredienteRepository,
+)
+from src.infrastructure.supabase.repositories.plato_repository import (
+    SupabasePlatoRepository,
+)
+from src.infrastructure.supabase.repositories.preferencias_repository import (
+    SupabasePreferenciasRepository,
+)
 
 bearer = HTTPBearer()
 

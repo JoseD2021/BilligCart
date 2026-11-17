@@ -1,15 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from src.application.use_cases.generate_response import (
-    GenerateResponseUseCase
-)
-
+from src.application.use_cases.generate_response import GenerateResponseUseCase
 from src.infrastructure.api.v1.dependencies import get_current_user
-from src.infrastructure.messaging.rabbitmq_ai_client import (
-    RabbitMQAIClient
-)
-
+from src.infrastructure.messaging.rabbitmq_ai_client import RabbitMQAIClient
 
 ai = APIRouter(prefix="/ai", tags=["AI"])
 

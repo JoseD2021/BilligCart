@@ -17,7 +17,6 @@ from src.events.contracts.ai_menu_events import (
 from src.events.infrastructure.rabbitmq_event_bus import RabbitMQEventBus
 from src.infrastructure.ai.ollama import OllamaClient
 
-
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

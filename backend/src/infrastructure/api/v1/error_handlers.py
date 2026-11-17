@@ -1,8 +1,16 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from postgrest import APIError
+
 from src.domain.errors import (
-    DomainError, EmailAlreadyRegistered, IngredienteRecentlyUpdated, InvalidCredentials, InvalidEmail, InvalidRequestBodyError, UserNotFound, WeakPassword,
+    DomainError,
+    EmailAlreadyRegistered,
+    IngredienteRecentlyUpdated,
+    InvalidCredentials,
+    InvalidEmail,
+    InvalidRequestBodyError,
+    UserNotFound,
+    WeakPassword,
 )
 
 STATUS_BY_ERROR = {

@@ -1,10 +1,10 @@
-from uuid import UUID
 import datetime
+from uuid import UUID
 
 from supabase import AsyncClient
 
-from src.domain.repositories.menu_repository import MenuRepository
 from src.domain.entities.menu import Menu
+from src.domain.repositories.menu_repository import MenuRepository
 
 TABLE = "Menu"
 

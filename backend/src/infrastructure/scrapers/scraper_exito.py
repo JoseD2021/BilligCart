@@ -2,10 +2,10 @@ import datetime
 import json
 from urllib.parse import quote
 
-from src.domain.entities.ingrediente import Ingrediente
-from src.domain.errors import ScrapingError
 from src.application.interfaces.scraper_builder import ScraperBuilder
+from src.domain.entities.ingrediente import Ingrediente
 from src.domain.enums.tienda import Tienda
+from src.domain.errors import ScrapingError
 
 
 class ScraperExito(ScraperBuilder):
@@ -58,7 +58,7 @@ class ScraperExito(ScraperBuilder):
         if d.get("nombre") is None or d.get("precio") is None or d.get("url") is None:
             raise ScrapingError("Exito: producto incompleto (posible cambio de estructura en la pagina)", d)
         return Ingrediente(
-            name=d["nombre"], last_updated=datetime.datetime.now(datetime.timezone.utc),
+            name=d["nombre"], last_updated=datetime.datetime.now(datetime.UTC),
             price=d["precio"], shop=self.tienda, url=d["url"],
         )
 

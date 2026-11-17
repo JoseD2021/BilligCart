@@ -1,5 +1,7 @@
 import os
-from supabase import acreate_client, AsyncClient, AsyncClientOptions
+
+from supabase import AsyncClient, AsyncClientOptions, acreate_client
+
 
 async def create_supabase_client() -> AsyncClient:
     return await acreate_client(

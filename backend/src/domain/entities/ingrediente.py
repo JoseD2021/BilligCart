@@ -1,7 +1,8 @@
-from dataclasses import dataclass
 import datetime
+from dataclasses import dataclass
 
 from src.domain.enums.tienda import Tienda
+
 
 @dataclass(frozen=True)
 class IngredienteFetchInfo:
@@ -23,4 +24,4 @@ class Ingrediente:
     
     @classmethod
     def default(cls, name: str) -> "Ingrediente":
-        return cls(name=name, last_updated=datetime.datetime.now(datetime.timezone.utc), shop=None, price=None, url=None)
+        return cls(name=name, last_updated=datetime.datetime.now(datetime.UTC), shop=None, price=None, url=None)

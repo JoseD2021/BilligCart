@@ -1,15 +1,24 @@
 import asyncio
+from datetime import UTC, datetime
 
 from realtime import dataclass
-from datetime import datetime, timezone
 
-from src.domain.repositories.ingrediente_repository import IngredienteRepository
+from src.application.commands.ingrediente.update_fetch_ingrediente import (
+    UpdateFetchIngredientCommand,
+    UpdateFetchIngredientHandler,
+)
 from src.application.interfaces.fetcher import Fetcher
-from src.application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientCommand, UpdateFetchIngredientHandler
-from src.application.scraping.director_scraping import DirectorScraping
 from src.application.interfaces.scraper_builder import ScraperBuilder
+from src.application.scraping.director_scraping import DirectorScraping
 from src.domain.entities.ingrediente import Ingrediente
-from src.domain.errors import IngredienteNotFound, NoOffersFound, ScrapingError, IngredienteRecentlyUpdated
+from src.domain.errors import (
+    IngredienteNotFound,
+    IngredienteRecentlyUpdated,
+    NoOffersFound,
+    ScrapingError,
+)
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+
 
 @dataclass(frozen=True)
 class ScrapeIngredienteCommand:
@@ -30,7 +39,7 @@ class ScrapeIngredienteHandler:
             raise IngredienteNotFound(cmd.id)
         
         if ing.last_updated is not None and ing.shop is not None:
-            lastUpdateDiff = datetime.strptime(ing.last_updated, "%Y-%m-%dT%H:%M:%S.%f%z") - datetime.now(timezone.utc)
+            lastUpdateDiff = datetime.strptime(ing.last_updated, "%Y-%m-%dT%H:%M:%S.%f%z") - datetime.now(UTC)
             
             if lastUpdateDiff.days < self._DAYS_TO_UPDATE:
                 raise IngredienteRecentlyUpdated(cmd.id, ing.last_updated)

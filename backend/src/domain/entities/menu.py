@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 import datetime
+from dataclasses import dataclass
+
 
 @dataclass(frozen=True)
 class Menu:
@@ -10,7 +11,7 @@ class Menu:
     
     @classmethod
     def default(cls, user_id: str) -> "Menu":
-        today = datetime.datetime.now(datetime.timezone.utc)
+        today = datetime.datetime.now(datetime.UTC)
 
         # calc lunes a las 00:00
         start_of_week = today - datetime.timedelta(days=today.weekday())
