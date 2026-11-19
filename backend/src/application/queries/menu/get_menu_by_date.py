@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from datetime import date
 
-from src.domain.repositories.menu_repository import MenuRepository
 from src.domain.entities.menu import Menu
+from src.domain.repositories.menu_repository import MenuRepository
+
 
 @dataclass(frozen=True)
 class GetMenuByDateQuery:

@@ -2,7 +2,6 @@ from supabase import AsyncClient
 
 from src.domain.errors import ResourceNotFound
 from src.infrastructure.supabase.repositories.mappers import plato_entity
-from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.entities.plato import Plato
 from src.domain.repositories.plato_repository import PlatoRepository
 

@@ -1,6 +1,8 @@
 import httpx
+
 from src.application.interfaces.fetcher import Fetcher
 from src.domain.errors import ScrapingError
+
 
 class HttpxFetcher(Fetcher):
     def __init__(self, client: httpx.AsyncClient | None = None):

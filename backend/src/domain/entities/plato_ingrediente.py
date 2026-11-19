@@ -3,6 +3,7 @@ from math import isfinite
 
 from src.domain.errors import InvalidRequestBodyError
 
+
 @dataclass(frozen=True)
 class PlatoIngrediente:
     quantity: float

@@ -3,8 +3,9 @@ import os
 
 import requests
 
+from src.domain.entities.ai_response import AIResponseSchema
+from src.domain.errors import AIServiceError
 from src.domain.repositories.ai_client_interface import AIClientInterface
-from src.infrastructure.ai.schemas import AIResponseSchema
 
 
 class OllamaClient(AIClientInterface):
@@ -45,26 +46,30 @@ class OllamaClient(AIClientInterface):
             "adicionales ni precios. "
             f"Solicitud del usuario: {prompt}"
         )
-
-        response = requests.post(
-            f"{self.base_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": full_prompt,
-                "stream": False,
-                "format": AIResponseSchema.model_json_schema(),
-                "options": {
-                    "num_ctx": 8192,
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": full_prompt,
+                    "stream": False,
+                    "format": AIResponseSchema.model_json_schema(),
+                    "options": {
+                        "num_ctx": 8192,
+                    },
                 },
-            },
-            timeout=400,
-        )
+                timeout=400,
+            )
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        data = response.json()
+            data = response.json()
+        
+        except requests.RequestException as exc:
+            raise AIServiceError("No se pudo consultar el servicio de IA") from exc
+
         generated_text = data.get("response", "")
-
+        
         if not isinstance(generated_text, str) or not generated_text.strip():
             raise RuntimeError(
                 "Ollama devolvió una respuesta vacía."

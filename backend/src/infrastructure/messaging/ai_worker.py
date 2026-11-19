@@ -17,7 +17,6 @@ from src.events.contracts.ai_menu_events import (
 from src.events.infrastructure.rabbitmq_event_bus import RabbitMQEventBus
 from src.infrastructure.ai.ollama import OllamaClient
 
-
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -144,7 +143,7 @@ async def process_message(
                     duration_ms,
                 )
 
-        except Exception as exc:
+        except Exception as exc: # noqa: BLE001 - el worker no debe caerse por un mensaje malo
             await publish_event_safely(
                 event_bus,
                 MenuGenerationFailed(

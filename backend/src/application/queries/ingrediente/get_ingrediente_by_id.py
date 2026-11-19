@@ -4,6 +4,7 @@ from src.domain.entities.ingrediente import Ingrediente
 from src.domain.errors import IngredienteNotFound
 from src.domain.repositories.ingrediente_repository import IngredienteRepository
 
+
 @dataclass(frozen=True)
 class GetIngredientByIdQuery:
     id: int

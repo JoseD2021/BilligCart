@@ -22,9 +22,6 @@ from src.application.commands.plato.delete_plato_by_id import (
 from src.application.commands.plato_ingrediente.create_many_plato_ingrediente import (
     CreateManyPlatoIngredienteCommandHandler,
 )
-from src.application.commands.plato_ingrediente.create_plato_ingrediente import (
-    CreatePlatoIngredienteRecetaCommand,
-)
 from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import (
     DeletePlatoIngredienteByPlatoIdCommand,
     DeletePlatoIngredienteByPlatoIdHandler,
@@ -51,7 +48,6 @@ from src.domain.repositories.plato_ingrediente_repository import (
     PlatoIngredienteRepository,
 )
 from src.domain.repositories.plato_repository import PlatoRepository
-
 
 logger = logging.getLogger(__name__)
 

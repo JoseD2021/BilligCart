@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends
-from src.application.commands.auth.login_user import LoginUserHandler, LoginUserCommand
-from src.application.commands.auth.register_user import RegisterUserHandler, RegisterUserCommand
+
+from src.application.commands.auth.login_user import LoginUserCommand, LoginUserHandler
+from src.application.commands.auth.register_user import (
+    RegisterUserCommand,
+    RegisterUserHandler,
+)
 from src.domain.entities.user import User
-from src.infrastructure.api.v1.schemas.auth import LoginBody, RegisterBody
 from src.infrastructure.api.v1.dependencies import (
     get_current_user,
     get_login_handler,
     get_register_handler,
 )
+from src.infrastructure.api.v1.schemas.auth import LoginBody, RegisterBody
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

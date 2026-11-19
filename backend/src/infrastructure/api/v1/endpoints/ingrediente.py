@@ -2,14 +2,32 @@ from fastapi import APIRouter, Depends
 
 from src.infrastructure.api.v1.dependencies import get_current_user, get_access_policy
 
-from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteCommand
-from src.application.commands.ingrediente.create_ingrediente import CreateIngredientCommand
-from src.application.commands.ingrediente.delete_ingrediente_by_id import DeleteIngredientByIdCommand
-from src.application.commands.ingrediente.update_ingrediente import UpdateIngredientCommand
-from src.application.queries.ingrediente.get_ingrediente_by_id import GetIngredientByIdQuery
-from src.infrastructure.api.v1.dependencies import get_create_ingredient_handler, get_delete_ingredient_handler, get_get_ingredient_by_id_handler, get_scrape_ingredient_handler, get_update_ingredient_handler
-from src.infrastructure.api.v1.schemas.ingrediente import CreateIngredienteBody
-from src.infrastructure.api.v1.schemas.ingrediente import UpdateIngredienteBody
+from src.application.commands.ingrediente.create_ingrediente import (
+    CreateIngredientCommand,
+)
+from src.application.commands.ingrediente.delete_ingrediente_by_id import (
+    DeleteIngredientByIdCommand,
+)
+from src.application.commands.ingrediente.scrape_ingrediente import (
+    ScrapeIngredienteCommand,
+)
+from src.application.commands.ingrediente.update_ingrediente import (
+    UpdateIngredientCommand,
+)
+from src.application.queries.ingrediente.get_ingrediente_by_id import (
+    GetIngredientByIdQuery,
+)
+from src.infrastructure.api.v1.dependencies import (
+    get_create_ingredient_handler,
+    get_delete_ingredient_handler,
+    get_get_ingredient_by_id_handler,
+    get_scrape_ingredient_handler,
+    get_update_ingredient_handler,
+)
+from src.infrastructure.api.v1.schemas.ingrediente import (
+    CreateIngredienteBody,
+    UpdateIngredienteBody,
+)
 
 router = APIRouter(prefix="/ingrediente", tags=["Ingrediente"], dependencies=[Depends(get_current_user)])
 

@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 import datetime
 from math import isfinite
+from dataclasses import dataclass
 
 from src.domain.enums.tienda import Tienda
 from src.domain.errors import InvalidRequestBodyError
+
 
 @dataclass(frozen=True)
 class IngredienteFetchInfo:

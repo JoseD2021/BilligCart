@@ -9,7 +9,6 @@ from src.events.contracts.ai_menu_events import (
     MenuGenerationStarted,
 )
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -1,16 +1,26 @@
 import asyncio
+from datetime import UTC, datetime
 
 from dataclasses import dataclass
 import logging
 from datetime import datetime, timezone
 
-from src.domain.repositories.ingrediente_repository import IngredienteRepository
+from src.application.commands.ingrediente.update_fetch_ingrediente import (
+    UpdateFetchIngredientCommand,
+    UpdateFetchIngredientHandler,
+)
 from src.application.interfaces.fetcher import Fetcher
-from src.application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientCommand, UpdateFetchIngredientHandler
-from src.application.scraping.director_scraping import DirectorScraping
 from src.application.interfaces.scraper_builder import ScraperBuilder
+from src.application.scraping.director_scraping import DirectorScraping
 from src.domain.entities.ingrediente import Ingrediente
-from src.domain.errors import IngredienteNotFound, NoOffersFound, ScrapingError, IngredienteRecentlyUpdated
+from src.domain.errors import (
+    IngredienteNotFound,
+    IngredienteRecentlyUpdated,
+    NoOffersFound,
+    ScrapingError,
+)
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+
 
 @dataclass(frozen=True)
 class ScrapeIngredienteCommand:

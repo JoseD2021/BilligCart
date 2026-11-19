@@ -1,5 +1,6 @@
 import datetime
 
+
 class DomainError(Exception):
     def __init__(self, message: str = ""):
         super().__init__(message)
@@ -60,3 +61,5 @@ class AccessDenied(DomainError):
 
 class OrderNotReady(DomainError):
     pass
+class AIServiceError(Exception):
+    """El servicio de IA no pudo procesar la solicitud."""

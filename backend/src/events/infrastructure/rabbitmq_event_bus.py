@@ -9,7 +9,6 @@ from src.events.application.event_registry import EventRegistry
 from src.events.contracts.base_event import BaseEvent
 from src.events.contracts.event_envelope import EventEnvelope
 
-
 logger = logging.getLogger(__name__)
 
 

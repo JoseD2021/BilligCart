@@ -2,15 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import logging
 
-from src.application.use_cases.generate_response import (
-    GenerateResponseUseCase
-)
-
+from src.application.use_cases.generate_response import GenerateResponseUseCase
 from src.infrastructure.api.v1.dependencies import get_current_user
-from src.infrastructure.messaging.rabbitmq_ai_client import (
-    RabbitMQAIClient
-)
-
+from src.infrastructure.messaging.rabbitmq_ai_client import RabbitMQAIClient
 
 ai = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -24,44 +18,20 @@ def generate_text(
     body: PromptRequest,
     current_user=Depends(get_current_user),
 ):
+    use_case = GenerateResponseUseCase(ai_client=RabbitMQAIClient())
 
     try:
-
-        ai_client = RabbitMQAIClient()
-
-        use_case = GenerateResponseUseCase(
-            ai_client=ai_client
-        )
-
-        result = use_case.execute(
-            body.prompt,
-            str(current_user.id),
-        )
-
-        return {
-            "status": "success",
-            "response": result
-        }
-
-    except TimeoutError:
-
+        result = use_case.execute(body.prompt, str(current_user.id))
+    except TimeoutError as exc:
         raise HTTPException(
             status_code=504,
-            detail=(
-                "Tiempo de espera agotado "
-                "esperando respuesta de IA"
-            )
-        )
-
-    except ConnectionError:
-
+            detail="Tiempo de espera agotado esperando respuesta de IA",
+        ) from exc
+    except ConnectionError as exc:
         raise HTTPException(
             status_code=503,
-            detail=(
-                "No fue posible conectarse "
-                "al sistema de mensajería"
-            )
-        )
+            detail="No fue posible conectarse al sistema de mensajería",
+        ) from exc
 
     except Exception:
         logging.getLogger(__name__).exception("Falló la generación de IA user_id=%s", current_user.id)
@@ -70,3 +40,4 @@ def generate_text(
             status_code=500,
             detail="Error interno al generar respuesta"
         )
+    return {"status": "success", "response": result}

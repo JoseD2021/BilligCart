@@ -1,16 +1,40 @@
 from fastapi import APIRouter, Depends
 
-from src.infrastructure.api.v1.dependencies import get_current_user, get_access_policy
-
-from src.application.commands.plato_ingrediente.create_plato_ingrediente import CreatePlatoIngredienteRecetaCommand
-from src.application.commands.plato_ingrediente.update_plato_ingrediente import UpdatePlatoIngredienteRecetaCommand
-from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_id import DeletePlatoIngredienteCommand
-from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import DeletePlatoIngredienteByPlatoIdCommand
-from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import GetPlatoIngredienteByPlatoIdQuery
-from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_id import GetPlatoIngredienteByIdQuery
-from src.infrastructure.api.v1.dependencies import get_create_many_plato_ingrediente_handler, get_create_plato_ingrediente_handler, get_delete_plato_ingrediente_by_plato_id_handler, get_delete_plato_ingrediente_handler, get_get_plato_ingrediente_by_id_handler, get_get_plato_ingrediente_by_plato_id_handler, get_update_plato_ingrediente_handler
-from src.infrastructure.api.v1.schemas.plato_ingrediente import CreatePlatoIngredienteBody, UpdatePlatoIngredienteBody
+from src.application.commands.plato_ingrediente.create_plato_ingrediente import (
+    CreatePlatoIngredienteRecetaCommand,
+)
+from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_id import (
+    DeletePlatoIngredienteCommand,
+)
+from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import (
+    DeletePlatoIngredienteByPlatoIdCommand,
+)
+from src.application.commands.plato_ingrediente.update_plato_ingrediente import (
+    UpdatePlatoIngredienteRecetaCommand,
+)
+from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_id import (
+    GetPlatoIngredienteByIdQuery,
+)
+from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import (
+    GetPlatoIngredienteByPlatoIdQuery,
+)
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
+
+from src.infrastructure.api.v1.dependencies import (
+    get_create_many_plato_ingrediente_handler,
+    get_create_plato_ingrediente_handler,
+    get_delete_plato_ingrediente_by_plato_id_handler,
+    get_delete_plato_ingrediente_handler,
+    get_get_plato_ingrediente_by_id_handler,
+    get_get_plato_ingrediente_by_plato_id_handler,
+    get_update_plato_ingrediente_handler, 
+    get_current_user, 
+    get_access_policy
+)
+from src.infrastructure.api.v1.schemas.plato_ingrediente import (
+    CreatePlatoIngredienteBody,
+    UpdatePlatoIngredienteBody,
+)
 
 router = APIRouter(prefix="/plato-ingrediente", tags=["PlatoIngrediente"], dependencies=[Depends(get_current_user)])
 

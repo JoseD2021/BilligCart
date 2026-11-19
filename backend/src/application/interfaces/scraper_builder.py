@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
-from src.domain.enums.tienda import Tienda
 from src.domain.entities.ingrediente import Ingrediente
+from src.domain.enums.tienda import Tienda
+
 
 class ScraperBuilder(ABC):
     tienda: Tienda

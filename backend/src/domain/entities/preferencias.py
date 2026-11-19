@@ -3,6 +3,7 @@ from math import isfinite
 
 from src.domain.errors import InvalidRequestBodyError
 
+
 @dataclass(frozen=True)
 class Preferencias:
     user_id: str
@@ -17,5 +18,5 @@ class Preferencias:
             raise InvalidRequestBodyError("Las restricciones no pueden estar vacías.")
 
     @classmethod
-    def default(cls, user_id: str) -> "Preferencias":
+    def default(cls, user_id: str) -> Preferencias:
         return cls(user_id=user_id)

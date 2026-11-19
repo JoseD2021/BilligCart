@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from src.domain.enums.plato_tipo import PlatoTipo
 
+
 class CreatePlatoBody(BaseModel):
     menu_id: int
     type: PlatoTipo
