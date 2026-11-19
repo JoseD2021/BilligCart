@@ -68,6 +68,10 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  solicitarPago: (orderId, key) => request("/pagos", {
+    method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ order_id: orderId }),
+  }),
+  getPagoActual: (orderId) => request(`/pagos/pedido/${encodeURIComponent(orderId)}`),
   getPreferencias: () => request("/preferencias"),
   guardarPreferencias: (data) => request("/preferencias", { method: "PUT", body: JSON.stringify(data) }),
   getMenuSemanal: () => request("/menu/weekly"),

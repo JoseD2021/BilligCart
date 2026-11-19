@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import Card from "../components/Card";
+import PaymentPanel from "../components/PaymentPanel";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { api } from "../services/api";
 
@@ -62,6 +63,7 @@ export default function PedidoScreen({ route }) {
         })}
       </Card>
       <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
+      <PaymentPanel orderId={pedido.id} />
       <TouchableOpacity onPress={cargar}><Text style={styles.textoActivo}>Actualizar estado</Text></TouchableOpacity>
     </View>
   );

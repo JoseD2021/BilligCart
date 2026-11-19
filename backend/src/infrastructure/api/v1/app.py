@@ -14,6 +14,7 @@ from src.infrastructure.api.v1.endpoints.plato_ingrediente import router as plat
 from src.infrastructure.api.v1.endpoints.preferencias import router as preferencias_router
 from src.infrastructure.api.v1.endpoints.compras import router as compras_router
 from src.infrastructure.api.v1.request_logging import register_request_logging
+from src.infrastructure.api.v1.endpoints.payments import router as payments_router
 
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(plato_ingrediente_router, prefix=prefix)
     app.include_router(preferencias_router, prefix=prefix)
     app.include_router(compras_router, prefix=prefix)
+    app.include_router(payments_router, prefix=prefix)
     return app
 
 app = create_app()

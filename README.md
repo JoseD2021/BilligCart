@@ -1,5 +1,9 @@
 # BilligCart
 
+La integracion de pagos con Stripe, sus limites actuales y las instrucciones de prueba
+estan documentados en [backend/PAYMENTS.md](backend/PAYMENTS.md). Los cobros permanecen
+bloqueados hasta conectar los precios finales, salvo el modo de pruebas explicito.
+
 BilligCart es una aplicación que genera menús semanales con inteligencia artificial, consulta productos de supermercados para encontrar precios y guarda la información del menú y sus ingredientes en Supabase.
 
 ## Tecnologías
