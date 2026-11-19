@@ -9,7 +9,7 @@ import { Platform } from "react-native";
 const BASE_URL =
   Platform.OS === "web"
     ? "/api/v1"
-    : process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000/v1";
+    : process.env.EXPO_PUBLIC_API_URL ?? "http://localhost/v1";
 
 // Token de sesión en memoria. AuthContext lo actualiza al iniciar/cerrar
 // sesión; cualquier llamada posterior a request() lo usa automáticamente.
