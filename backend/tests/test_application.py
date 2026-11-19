@@ -1,27 +1,34 @@
 import json
 import unittest
 from dataclasses import replace
-from datetime import date, datetime, timezone
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 from src.application.access_policy import AccessPolicy
 from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
 from src.application.use_cases.generate_weekly_menu import GenerateWeeklyMenu
-from src.application.use_cases.persist_generated_menu import PersistGeneratedMenuUseCase, _interpretar_menu
+from src.application.use_cases.persist_generated_menu import (
+    PersistGeneratedMenuUseCase,
+    _interpretar_menu,
+)
 from src.application.use_cases.preferences import PreferencesUseCase
 from src.application.use_cases.shopping import ShoppingUseCase
-from src.domain.entities.ingrediente import Ingrediente
 from src.domain.entities.menu import Menu
 from src.domain.entities.plato import Plato
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
 from src.domain.entities.preferencias import Preferencias
 from src.domain.entities.user import User
 from src.domain.enums.plato_tipo import PlatoTipo
-from src.domain.errors import AccessDenied, InvalidRequestBodyError, MenuGenerationError, OrderNotReady, ResourceNotFound
+from src.domain.errors import (
+    AccessDenied,
+    InvalidRequestBodyError,
+    MenuGenerationError,
+    OrderNotReady,
+    ResourceNotFound,
+)
 from src.events.application.ai_event_handlers import on_menu_generation_completed
 from src.events.contracts.ai_menu_events import MenuGenerationCompleted
-
 
 USER = User("00000000-0000-0000-0000-000000000001", "user@example.com")
 

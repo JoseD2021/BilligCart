@@ -9,9 +9,9 @@ from src.infrastructure.api.v1.dependencies import (
     get_create_menu_handler,
     get_current_menu_handler,
     get_current_user,
+    get_generate_weekly_menu,
     get_menu_by_date_handler,
-    get_weekly_menu, 
-    get_generate_weekly_menu
+    get_weekly_menu,
 )
 
 router = APIRouter(prefix="/menu", tags=["Menu"])

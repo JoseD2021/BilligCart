@@ -1,19 +1,20 @@
 """Opt-in integration test against a real RabbitMQ, using isolated test queues."""
 import asyncio
 import os
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-import unittest
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from src.domain.entities.payment import PaymentUnavailable, PaymentStatus
-from src.infrastructure.payments.store import PaymentStore
-from src.infrastructure.payments.worker import PaymentWorker
-from src.infrastructure.payments.stripe_gateway import receive_webhook
-from test_payments import Quotes, USER, ORDER, stripe_event
+from test_payments import ORDER, USER, Quotes, stripe_event
+
 from src.application.use_cases.payments import Payments
+from src.domain.entities.payment import PaymentStatus, PaymentUnavailable
+from src.infrastructure.payments.store import PaymentStore
+from src.infrastructure.payments.stripe_gateway import receive_webhook
+from src.infrastructure.payments.worker import PaymentWorker
 
 
 @unittest.skipUnless(os.getenv("PAYMENTS_BROKER_TEST") == "1", "Requires an explicitly enabled real RabbitMQ")

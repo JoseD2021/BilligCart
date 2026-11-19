@@ -8,9 +8,15 @@ from src.application.gps.publishing import BackgroundPublisher
 from src.application.interfaces.auth_service import AuthService
 from src.application.use_cases.gps.connect_courier import ConnectCourierHandler
 from src.application.use_cases.gps.disconnect_courier import DisconnectCourierHandler
-from src.application.use_cases.gps.receive_courier_location import ReceiveCourierLocationHandler
-from src.application.use_cases.gps.subscribe_to_tracking import SubscribeToTrackingHandler
-from src.application.use_cases.gps.unsubscribe_from_tracking import UnsubscribeFromTrackingHandler
+from src.application.use_cases.gps.receive_courier_location import (
+    ReceiveCourierLocationHandler,
+)
+from src.application.use_cases.gps.subscribe_to_tracking import (
+    SubscribeToTrackingHandler,
+)
+from src.application.use_cases.gps.unsubscribe_from_tracking import (
+    UnsubscribeFromTrackingHandler,
+)
 from src.domain.entities.gps.policies import PersistenceThrottle
 from src.events.application.event_publisher import EventPublisher
 from src.infrastructure.gps.config import GpsSettings

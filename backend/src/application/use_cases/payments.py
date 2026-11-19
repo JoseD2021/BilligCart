@@ -1,9 +1,13 @@
-from datetime import datetime, timezone
 import time
+from datetime import UTC, datetime
 
-from src.application.interfaces.payments import QuoteSource, PaymentGateway
-from src.domain.entities.payment import PaymentStatus, PaymentRejected, PaymentUnavailable
-from src.domain.errors import ResourceNotFound, OrderNotReady, InvalidRequestBodyError
+from src.application.interfaces.payments import PaymentGateway, QuoteSource
+from src.domain.entities.payment import (
+    PaymentRejected,
+    PaymentStatus,
+    PaymentUnavailable,
+)
+from src.domain.errors import InvalidRequestBodyError, OrderNotReady, ResourceNotFound
 
 
 class Payments:
@@ -29,7 +33,7 @@ class Payments:
         quote = await self.quotes.get(user_id, order_id)
         if quote.user_id != user_id or quote.order_id != order_id:
             raise ResourceNotFound("Pedido no encontrado.")
-        if quote.expires_at <= datetime.now(timezone.utc):
+        if quote.expires_at <= datetime.now(UTC):
             raise OrderNotReady("La cotizacion final ha vencido.")
         return self.store.create(quote, key)
 

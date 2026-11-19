@@ -1,11 +1,10 @@
 import asyncio
 import logging
 
-from src.application.use_cases.preferences import PreferencesUseCase
-from src.application.use_cases.persist_generated_menu import PersistGeneratedMenuUseCase
 from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
+from src.application.use_cases.persist_generated_menu import PersistGeneratedMenuUseCase
+from src.application.use_cases.preferences import PreferencesUseCase
 from src.domain.repositories.ai_client_interface import AIClientInterface
-
 
 logger = logging.getLogger(__name__)
 

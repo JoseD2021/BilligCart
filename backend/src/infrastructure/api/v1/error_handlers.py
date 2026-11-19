@@ -1,22 +1,24 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from postgrest import APIError
-import logging
+
 from src.domain.errors import (
+    AccessDenied,
     AIServiceError,
     DomainError,
     EmailAlreadyRegistered,
+    IngredienteNotFound,
     IngredienteRecentlyUpdated,
     InvalidCredentials,
     InvalidEmail,
     InvalidRequestBodyError,
+    MenuGenerationError,
+    OrderNotReady,
+    ResourceNotFound,
     UserNotFound,
     WeakPassword,
-    MenuGenerationError,
-    AccessDenied, 
-    ResourceNotFound, 
-    IngredienteNotFound,
-    OrderNotReady
 )
 
 STATUS_BY_ERROR = {

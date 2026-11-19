@@ -1,32 +1,33 @@
 import asyncio
-from dataclasses import replace
-from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
 import os
+import time
+import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import time
 from types import SimpleNamespace
-import unittest
 from unittest.mock import AsyncMock, patch
 
-from fastapi.testclient import TestClient
 import httpx
+from fastapi.testclient import TestClient
 
 from src.application.use_cases.payments import Payments, ProcessPayment
 from src.domain.entities.payment import PaymentQuote, PaymentStatus, PaymentUnavailable
 from src.domain.entities.user import User
 from src.domain.errors import OrderNotReady
-from src.events.contracts.event_envelope import EventEnvelope
 from src.infrastructure.api.v1.app import create_app
 from src.infrastructure.api.v1.dependencies import get_current_user
-from src.infrastructure.payments.config import get_payments, UnconfiguredQuotes
+from src.infrastructure.payments.config import UnconfiguredQuotes, get_payments
 from src.infrastructure.payments.store import PaymentStore
-from src.infrastructure.payments.stripe_gateway import StripeGateway, receive_webhook, verify_webhook
-from src.infrastructure.payments.worker import PaymentWorker, REQUESTS, SUCCESSES
-
+from src.infrastructure.payments.stripe_gateway import (
+    StripeGateway,
+    receive_webhook,
+    verify_webhook,
+)
+from src.infrastructure.payments.worker import REQUESTS, SUCCESSES, PaymentWorker
 
 USER = "00000000-0000-0000-0000-000000000001"
 ORDER = "00000000-0000-0000-0000-000000000002"
@@ -36,7 +37,7 @@ SECRET = "whsec_unit_test_only"
 class Quotes:
     async def get(self, user_id, order_id):
         return PaymentQuote(order_id, user_id, 1000, "usd", "final-quote-v1",
-                            datetime.now(timezone.utc) + timedelta(hours=1))
+                            datetime.now(UTC) + timedelta(hours=1))
 
 
 def signed(event, stamp=None):

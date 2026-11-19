@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 
-from src.infrastructure.api.v1.dependencies import get_current_user, get_access_policy
-
 from src.application.commands.plato.create_plato import CreatePlatoCommand
 from src.application.commands.plato.delete_plato_by_id import DeletePlatoByIdCommand
 from src.application.commands.plato.update_plato import UpdatePlatoCommand
 from src.application.queries.plato.get_plato_by_day import GetPlatoByDayQuery
 from src.infrastructure.api.v1.dependencies import (
+    get_access_policy,
     get_create_plato_handler,
+    get_current_user,
     get_delete_plato_handler,
     get_plato_by_day_handler,
     get_update_plato_handler,

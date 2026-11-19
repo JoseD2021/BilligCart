@@ -1,11 +1,12 @@
 import asyncio
 
-from src.domain.repositories.menu_repository import MenuRepository
-from src.domain.repositories.plato_repository import PlatoRepository
-from src.domain.repositories.ingrediente_repository import IngredienteRepository
-from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
 from src.domain.errors import ResourceNotFound
-
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+from src.domain.repositories.menu_repository import MenuRepository
+from src.domain.repositories.plato_ingrediente_repository import (
+    PlatoIngredienteRepository,
+)
+from src.domain.repositories.plato_repository import PlatoRepository
 
 DIAS = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
 

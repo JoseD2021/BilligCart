@@ -1,9 +1,9 @@
 """Confirmed delivery, delayed retries and separate payment/event consumers."""
 import asyncio
-from dataclasses import asdict
 import json
 import logging
 import os
+from dataclasses import asdict
 
 import aio_pika
 from dotenv import load_dotenv
@@ -13,7 +13,6 @@ from src.events.contracts.event_envelope import EventEnvelope
 from src.events.contracts.payment_events import PaymentRequested, PaymentSucceeded
 from src.infrastructure.payments.config import payment_store
 from src.infrastructure.payments.stripe_gateway import StripeGateway
-
 
 logger = logging.getLogger(__name__)
 REQUESTS = "payments.requests"

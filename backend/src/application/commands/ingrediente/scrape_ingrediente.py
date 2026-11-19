@@ -1,9 +1,7 @@
 import asyncio
-from datetime import UTC, datetime
-
-from dataclasses import dataclass
 import logging
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from src.application.commands.ingrediente.update_fetch_ingrediente import (
     UpdateFetchIngredientCommand,
@@ -41,7 +39,7 @@ class ScrapeIngredienteHandler:
             raise IngredienteNotFound(cmd.id)
 
         if ing.last_updated is not None and ing.shop is not None:
-            lastUpdateDiff = datetime.now(timezone.utc) - ing.last_updated
+            lastUpdateDiff = datetime.now(UTC) - ing.last_updated
 
             if lastUpdateDiff.days < self._DAYS_TO_UPDATE:
                 raise IngredienteRecentlyUpdated(cmd.id, ing.last_updated)

@@ -37,7 +37,8 @@ from src.application.queries.plato.get_plato_by_day import (
     GetPlatoByDayHandler,
     GetPlatoByDayQuery,
 )
-from src.domain.entities.ai_response import GeneratedDish as _PlatoGenerado, GeneratedIngredient as _IngredienteGenerado
+from src.domain.entities.ai_response import GeneratedDish as _PlatoGenerado
+from src.domain.entities.ai_response import GeneratedIngredient as _IngredienteGenerado
 from src.domain.entities.plato import Plato
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
 from src.domain.enums.plato_tipo import PlatoTipo

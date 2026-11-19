@@ -5,8 +5,8 @@ import uuid
 
 import pika
 
-from src.domain.repositories.ai_client_interface import AIClientInterface
 from src.domain.errors import MenuGenerationError
+from src.domain.repositories.ai_client_interface import AIClientInterface
 
 
 class RabbitMQAIClient(AIClientInterface):

@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from src.domain.entities.payment import PaymentQuote, Payment
+from src.domain.entities.payment import Payment, PaymentQuote
 
 
 class QuoteSource(Protocol):

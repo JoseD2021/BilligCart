@@ -1,9 +1,9 @@
 from supabase import AsyncClient
 
 from src.domain.entities.ingrediente import Ingrediente, IngredienteFetchInfo
+from src.domain.errors import ResourceNotFound
 from src.domain.repositories.ingrediente_repository import IngredienteRepository
 from src.infrastructure.supabase.repositories.mappers import ingrediente_entity
-from src.domain.errors import ResourceNotFound
 
 TABLE = "Ingrediente"
 

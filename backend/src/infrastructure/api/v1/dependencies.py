@@ -39,7 +39,6 @@ from src.application.commands.plato_ingrediente.update_plato_ingrediente import 
     UpdatePlatoIngredienteCommandHandler,
 )
 from src.application.interfaces.auth_service import AuthService
-from src.application.interfaces.fetcher import Fetcher
 from src.application.queries.ingrediente.get_ingrediente_by_id import (
     GetIngredientByIdHandler,
 )
@@ -291,14 +290,18 @@ def get_generate_weekly_menu(
     ingredientes=Depends(get_ingrediente_repository), relaciones=Depends(get_plato_ingrediente_repository),
 ):
     from src.application.use_cases.generate_weekly_menu import GenerateWeeklyMenu
-    from src.application.use_cases.persist_generated_menu import PersistGeneratedMenuUseCase
+    from src.application.use_cases.persist_generated_menu import (
+        PersistGeneratedMenuUseCase,
+    )
     from src.infrastructure.messaging.rabbitmq_ai_client import RabbitMQAIClient
     return GenerateWeeklyMenu(preferences, RabbitMQAIClient(persist_via_events=False),
                               PersistGeneratedMenuUseCase(menus, platos, ingredientes, relaciones), weekly)
 
 
 def get_pedido_repository(client: AsyncClient = Depends(get_supabase_client)):
-    from src.infrastructure.supabase.repositories.pedido_repository import SupabasePedidoRepository
+    from src.infrastructure.supabase.repositories.pedido_repository import (
+        SupabasePedidoRepository,
+    )
     return SupabasePedidoRepository(client)
 
 

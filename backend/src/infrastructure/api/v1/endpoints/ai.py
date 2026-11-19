@@ -1,6 +1,7 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-import logging
 
 from src.application.use_cases.generate_response import GenerateResponseUseCase
 from src.infrastructure.api.v1.dependencies import get_current_user

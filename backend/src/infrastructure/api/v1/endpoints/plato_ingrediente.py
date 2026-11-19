@@ -19,17 +19,16 @@ from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid 
     GetPlatoIngredienteByPlatoIdQuery,
 )
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
-
 from src.infrastructure.api.v1.dependencies import (
+    get_access_policy,
     get_create_many_plato_ingrediente_handler,
     get_create_plato_ingrediente_handler,
+    get_current_user,
     get_delete_plato_ingrediente_by_plato_id_handler,
     get_delete_plato_ingrediente_handler,
     get_get_plato_ingrediente_by_id_handler,
     get_get_plato_ingrediente_by_plato_id_handler,
-    get_update_plato_ingrediente_handler, 
-    get_current_user, 
-    get_access_policy
+    get_update_plato_ingrediente_handler,
 )
 from src.infrastructure.api.v1.schemas.plato_ingrediente import (
     CreatePlatoIngredienteBody,

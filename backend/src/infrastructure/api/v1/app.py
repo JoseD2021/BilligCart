@@ -1,20 +1,5 @@
-from fastapi import FastAPI
 import logging
 import os
-from src.infrastructure.api.v1.endpoints.routes import health
-from src.infrastructure.api.v1.endpoints.ai import ai
-
-from src.infrastructure.supabase.client import create_supabase_client
-from src.infrastructure.api.v1.error_handlers import register_error_handlers
-from src.infrastructure.api.v1.endpoints.auth import router as auth_router
-from src.infrastructure.api.v1.endpoints.menu import router as menu_router
-from src.infrastructure.api.v1.endpoints.plato import router as plato_router
-from src.infrastructure.api.v1.endpoints.ingrediente import router as ingrediente_router
-from src.infrastructure.api.v1.endpoints.plato_ingrediente import router as plato_ingrediente_router
-from src.infrastructure.api.v1.endpoints.preferencias import router as preferencias_router
-from src.infrastructure.api.v1.endpoints.compras import router as compras_router
-from src.infrastructure.api.v1.request_logging import register_request_logging
-from src.infrastructure.api.v1.endpoints.payments import router as payments_router
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -22,14 +7,20 @@ from fastapi import FastAPI
 
 from src.infrastructure.api.v1.endpoints.ai import ai
 from src.infrastructure.api.v1.endpoints.auth import router as auth_router
+from src.infrastructure.api.v1.endpoints.compras import router as compras_router
 from src.infrastructure.api.v1.endpoints.ingrediente import router as ingrediente_router
 from src.infrastructure.api.v1.endpoints.menu import router as menu_router
+from src.infrastructure.api.v1.endpoints.payments import router as payments_router
 from src.infrastructure.api.v1.endpoints.plato import router as plato_router
 from src.infrastructure.api.v1.endpoints.plato_ingrediente import (
     router as plato_ingrediente_router,
 )
+from src.infrastructure.api.v1.endpoints.preferencias import (
+    router as preferencias_router,
+)
 from src.infrastructure.api.v1.endpoints.routes import health
 from src.infrastructure.api.v1.error_handlers import register_error_handlers
+from src.infrastructure.api.v1.request_logging import register_request_logging
 from src.infrastructure.supabase.client import create_supabase_client
 
 load_dotenv()

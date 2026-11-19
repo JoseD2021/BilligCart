@@ -11,8 +11,8 @@ services:
     - "traefik.http.routers.backend.middlewares=api-strip"
     - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
     volumes:
-      - .:/app
-      - payment-journal:/payment-data
+      - .:/app,z
+      - payment-journal:/payment-data,z
     env_file:
       - .env
     environment:
@@ -35,7 +35,7 @@ services:
       - -m
       - src.infrastructure.messaging.ai_worker
     volumes:
-      - .:/app
+      - .:/app,z
     env_file:
       - .env
     environment:
@@ -57,7 +57,7 @@ services:
       - -m
       - src.events.run_ai_events_worker
     volumes:
-      - .:/app
+      - .:/app,z
     env_file:
       - .env
     restart: unless-stopped
@@ -71,7 +71,7 @@ services:
     build: .
     command: ["python", "-m", "src.infrastructure.payments.worker"]
     volumes:
-      - .:/app
+      - .:/app,z
       - payment-journal:/payment-data
     env_file: .env
     environment:
@@ -119,7 +119,14 @@ services:
       - internal_network
 
     # Configuracion para GPU
-           
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   ollama-init:
     image: curlimages/curl:latest

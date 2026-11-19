@@ -1,6 +1,6 @@
 import datetime
-from math import isfinite
 from dataclasses import dataclass
+from math import isfinite
 
 from src.domain.enums.tienda import Tienda
 from src.domain.errors import InvalidRequestBodyError
@@ -35,5 +35,5 @@ class Ingrediente:
             raise InvalidRequestBodyError("El precio debe ser finito y no negativo.")
 
     @classmethod
-    def default(cls, name: str) -> "Ingrediente":
-        return cls(name=name, last_updated=datetime.datetime.now(datetime.timezone.utc), shop=None, price=None, url=None)
+    def default(cls, name: str) -> Ingrediente:
+        return cls(name=name, last_updated=datetime.datetime.now(datetime.UTC), shop=None, price=None, url=None)

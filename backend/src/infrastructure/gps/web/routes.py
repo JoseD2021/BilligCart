@@ -12,9 +12,15 @@ from src.application.gps.errors import Forbidden
 from src.application.interfaces.auth_service import AuthService
 from src.application.use_cases.gps.connect_courier import ConnectCourierCommand
 from src.application.use_cases.gps.disconnect_courier import DisconnectCourierCommand
-from src.application.use_cases.gps.receive_courier_location import ReceiveCourierLocationCommand
-from src.application.use_cases.gps.subscribe_to_tracking import SubscribeToTrackingCommand
-from src.application.use_cases.gps.unsubscribe_from_tracking import UnsubscribeFromTrackingCommand
+from src.application.use_cases.gps.receive_courier_location import (
+    ReceiveCourierLocationCommand,
+)
+from src.application.use_cases.gps.subscribe_to_tracking import (
+    SubscribeToTrackingCommand,
+)
+from src.application.use_cases.gps.unsubscribe_from_tracking import (
+    UnsubscribeFromTrackingCommand,
+)
 from src.domain.entities.gps.errors import InvalidLocation
 from src.domain.entities.user import User
 from src.domain.errors import InvalidCredentials
@@ -42,7 +48,7 @@ async def _authenticate(ws: WebSocket, auth: AuthService) -> User:
     try:
         raw = await asyncio.wait_for(ws.receive_text(), AUTH_TIMEOUT_S)
         msg = json.loads(raw)
-    except (asyncio.TimeoutError, ValueError) as exc:
+    except (TimeoutError, ValueError) as exc:
         raise InvalidCredentials("auth timeout o mensaje inválido") from exc
     if not isinstance(msg, dict) or msg.get("type") != "auth" or not isinstance(msg.get("token"), str):
         raise InvalidCredentials("se esperaba {type:'auth', token}")

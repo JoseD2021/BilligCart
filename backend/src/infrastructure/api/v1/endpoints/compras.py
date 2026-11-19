@@ -2,8 +2,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from src.infrastructure.api.v1.dependencies import get_current_user, get_shopping_use_case
-
+from src.infrastructure.api.v1.dependencies import (
+    get_current_user,
+    get_shopping_use_case,
+)
 
 router = APIRouter(tags=["Compras y pedidos"])
 

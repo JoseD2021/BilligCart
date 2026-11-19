@@ -2,20 +2,18 @@ import unittest
 from dataclasses import replace
 from datetime import date
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
 from src.domain.entities.menu import Menu
 from src.domain.entities.plato import Plato
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
-from src.domain.entities.preferencias import Preferencias
 from src.domain.entities.user import User
 from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.errors import InvalidCredentials
-from src.infrastructure.api.v1.app import create_app
 from src.infrastructure.api.v1 import dependencies as deps
-
+from src.infrastructure.api.v1.app import create_app
 
 USER = User("00000000-0000-0000-0000-000000000001", "user@example.com")
 DISH = {"menu_id": 1, "type": "Desayuno", "name": "Arroz", "day": 1}

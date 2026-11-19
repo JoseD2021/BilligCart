@@ -4,11 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
+from src.domain.entities.payment import PaymentUnavailable
 from src.infrastructure.api.v1.dependencies import get_current_user
 from src.infrastructure.payments.config import get_payments, payment_store
-from src.infrastructure.payments.stripe_gateway import verify_webhook, receive_webhook
-from src.domain.entities.payment import PaymentUnavailable
-
+from src.infrastructure.payments.stripe_gateway import receive_webhook, verify_webhook
 
 router = APIRouter(prefix="/pagos", tags=["Pagos"])
 

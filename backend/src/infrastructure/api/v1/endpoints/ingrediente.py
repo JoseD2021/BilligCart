@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends
 
-from src.infrastructure.api.v1.dependencies import get_current_user, get_access_policy
-
 from src.application.commands.ingrediente.create_ingrediente import (
     CreateIngredientCommand,
 )
@@ -18,7 +16,9 @@ from src.application.queries.ingrediente.get_ingrediente_by_id import (
     GetIngredientByIdQuery,
 )
 from src.infrastructure.api.v1.dependencies import (
+    get_access_policy,
     get_create_ingredient_handler,
+    get_current_user,
     get_delete_ingredient_handler,
     get_get_ingredient_by_id_handler,
     get_scrape_ingredient_handler,

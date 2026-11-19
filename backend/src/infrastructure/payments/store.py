@@ -3,18 +3,18 @@
 Single-host SQLite adapter. API and workers share the same mounted directory.
 All state changes and outbox inserts commit in the same transaction.
 """
-from contextlib import contextmanager
-from dataclasses import asdict, replace
 import json
-from pathlib import Path
 import sqlite3
 import time
+from contextlib import contextmanager
+from dataclasses import asdict, replace
+from pathlib import Path
 from uuid import uuid4
 
 from src.domain.entities.payment import Payment, PaymentQuote, PaymentStatus
 from src.domain.errors import InvalidRequestBodyError
-from src.events.contracts.payment_events import PaymentRequested, PaymentSucceeded
 from src.events.contracts.event_envelope import EventEnvelope
+from src.events.contracts.payment_events import PaymentRequested, PaymentSucceeded
 
 
 class PaymentStore:

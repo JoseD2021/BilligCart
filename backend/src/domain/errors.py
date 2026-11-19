@@ -37,7 +37,7 @@ class IngredienteNotFound(DomainError):
 
 class ScrapingError(DomainError):
     def __init__(self, url: str, info: dict | None = None):
-        super().__init__(f"Error scraping URL {url}: {str(info)}")
+        super().__init__(f"Error scraping URL {url}: {info!s}")
         self.url = url
         self.info = info
 

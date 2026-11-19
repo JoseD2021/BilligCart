@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import os
+from datetime import UTC, datetime, timedelta
 
 from src.application.use_cases.payments import Payments
 from src.domain.entities.payment import PaymentQuote
@@ -20,7 +20,7 @@ class SandboxQuotes:
 
     async def get(self, user_id, order_id):
         return PaymentQuote(order_id, user_id, self.amount_minor, self.currency, "sandbox-fixture-v1",
-                            datetime.now(timezone.utc) + timedelta(hours=1))
+                            datetime.now(UTC) + timedelta(hours=1))
 
 
 def payment_store():

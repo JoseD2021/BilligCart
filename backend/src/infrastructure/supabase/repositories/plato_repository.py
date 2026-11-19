@@ -1,9 +1,9 @@
 from supabase import AsyncClient
 
-from src.domain.errors import ResourceNotFound
-from src.infrastructure.supabase.repositories.mappers import plato_entity
 from src.domain.entities.plato import Plato
+from src.domain.errors import ResourceNotFound
 from src.domain.repositories.plato_repository import PlatoRepository
+from src.infrastructure.supabase.repositories.mappers import plato_entity
 
 TABLE = "Plato"
 

@@ -4,18 +4,28 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from src.domain.entities.ingrediente import Ingrediente
+from src.domain.entities.pedido import Pedido
 from src.domain.entities.plato import Plato
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
 from src.domain.entities.preferencias import Preferencias
 from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.enums.tienda import Tienda
 from src.infrastructure.supabase.auth_service import SupabaseAuthService
-from src.infrastructure.supabase.repositories.ingrediente_repository import SupabaseIngredienteRepository
-from src.infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
-from src.infrastructure.supabase.repositories.plato_ingrediente_repository import SupabasePlatoIngredienteRepository
-from src.infrastructure.supabase.repositories.preferencias_repository import SupabasePreferenciasRepository
-from src.infrastructure.supabase.repositories.pedido_repository import SupabasePedidoRepository
-from src.domain.entities.pedido import Pedido
+from src.infrastructure.supabase.repositories.ingrediente_repository import (
+    SupabaseIngredienteRepository,
+)
+from src.infrastructure.supabase.repositories.pedido_repository import (
+    SupabasePedidoRepository,
+)
+from src.infrastructure.supabase.repositories.plato_ingrediente_repository import (
+    SupabasePlatoIngredienteRepository,
+)
+from src.infrastructure.supabase.repositories.plato_repository import (
+    SupabasePlatoRepository,
+)
+from src.infrastructure.supabase.repositories.preferencias_repository import (
+    SupabasePreferenciasRepository,
+)
 
 
 def database(row):

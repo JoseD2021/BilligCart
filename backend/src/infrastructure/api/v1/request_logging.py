@@ -4,7 +4,6 @@ from uuid import uuid4
 
 from fastapi.responses import JSONResponse
 
-
 logger = logging.getLogger("billigcart.api")
 
 

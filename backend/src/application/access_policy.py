@@ -1,8 +1,10 @@
 from src.domain.entities.user import User
 from src.domain.errors import AccessDenied, ResourceNotFound
 from src.domain.repositories.menu_repository import MenuRepository
+from src.domain.repositories.plato_ingrediente_repository import (
+    PlatoIngredienteRepository,
+)
 from src.domain.repositories.plato_repository import PlatoRepository
-from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
 
 
 class AccessPolicy:

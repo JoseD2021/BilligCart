@@ -5,7 +5,11 @@ import time
 
 import httpx
 
-from src.domain.entities.payment import PaymentUnavailable, PaymentRejected, PaymentStatus
+from src.domain.entities.payment import (
+    PaymentRejected,
+    PaymentStatus,
+    PaymentUnavailable,
+)
 
 
 class StripeGateway:

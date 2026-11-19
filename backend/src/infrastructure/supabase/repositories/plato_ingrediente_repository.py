@@ -1,11 +1,11 @@
 from supabase import AsyncClient
 
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
-from src.infrastructure.supabase.repositories.mappers import relacion_entity
 from src.domain.errors import ResourceNotFound
 from src.domain.repositories.plato_ingrediente_repository import (
     PlatoIngredienteRepository,
 )
+from src.infrastructure.supabase.repositories.mappers import relacion_entity
 
 TABLE = "PlatoIngrediente"
 

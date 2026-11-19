@@ -1,15 +1,14 @@
-from dataclasses import asdict, replace
 import hashlib
 import json
+from dataclasses import asdict, replace
 from uuid import uuid4
 
+from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
+from src.application.use_cases.preferences import PreferencesUseCase
 from src.domain.entities.compra import ShoppingItem, ShoppingList
 from src.domain.entities.pedido import Pedido
 from src.domain.errors import OrderNotReady, ResourceNotFound
 from src.domain.repositories.pedido_repository import PedidoRepository
-from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
-from src.application.use_cases.preferences import PreferencesUseCase
-
 
 # Las cantidades se agregan en una unidad común; el precio del catálogo es
 # una referencia del producto encontrado, sin información de tamaño de empaque.
