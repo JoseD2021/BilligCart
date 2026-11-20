@@ -5,7 +5,7 @@ import { api } from "../services/api";
 import { colors, spacing, typography } from "../theme/theme";
 
 
-export default function PaymentPanel({ orderId }) {
+export default function PaymentPanel({ orderId, onSucceeded }) {
   const [payment, setPayment] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -24,6 +24,11 @@ export default function PaymentPanel({ orderId }) {
   }, [orderId]));
 
   useEffect(() => { requestKey.current = null; setPayment(null); setError(null); }, [orderId]);
+
+  // Aviso opcional al carrito: cuando Stripe confirma el pago (vía webhook) pasa al siguiente paso.
+  useEffect(() => {
+    if (payment?.status === "succeeded") onSucceeded?.();
+  }, [payment?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function requestPayment() {
     if (busy) return;

@@ -4,7 +4,7 @@ import { Text } from "react-native";
 
 import PreferenciasScreen from "../screens/PreferenciasScreen";
 import MenuStack from "./MenuStack";
-import ListaComprasScreen from "../screens/ListaComprasScreen";
+import CarritoScreen from "../screens/CarritoScreen";
 import PedidoScreen from "../screens/PedidoScreen";
 import { colors } from "../theme/theme";
 
@@ -29,7 +29,7 @@ export default function AppTabs() {
       })}
     >
       <Tab.Screen name="Menú" component={MenuStack} />
-      <Tab.Screen name="Compras" component={ListaComprasScreen} />
+      <Tab.Screen name="Compras" component={CarritoScreen} />
       <Tab.Screen name="Pedido" component={PedidoScreen} />
       <Tab.Screen name="Preferencias" component={PreferenciasScreen} />
     </Tab.Navigator>
