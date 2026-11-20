@@ -3,9 +3,9 @@ import os
 
 import requests
 
-from src.domain.entities.ai_response import AIResponseSchema
 from src.domain.errors import AIServiceError
 from src.domain.repositories.ai_client_interface import AIClientInterface
+from src.infrastructure.ai.schemas import AIResponseSchema
 
 
 class OllamaClient(AIClientInterface):

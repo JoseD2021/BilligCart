@@ -32,8 +32,7 @@ class ScraperOlimpica(ScraperBuilder):
 
         for producto in data:
             oferta = self._oferta_disponible(producto)
-            #print(f"oferta: {oferta}")
-            
+
             if oferta:
                 self._items.append((producto, oferta))
 
@@ -65,13 +64,10 @@ class ScraperOlimpica(ScraperBuilder):
     # --- helpers ---
     def _oferta_disponible(self, producto: dict) -> dict | None:
         for item in producto.get("items", []):
-            #print(f"item: {item}")
             for seller in item.get("sellers", []):
-                #print(f"seller: {seller}")
                 if seller.get("sellerId") != self._SELLER_PROPIO:
                     continue
                 oferta = seller.get("commertialOffer") or {}
                 if oferta.get("IsAvailable") and (oferta.get("Price") or 0) > 0:
-                    print(f"[OLIMPICA] Oferta disponible: {producto['productName']} ${oferta['Price']} ({producto['link']})")
                     return oferta
         return None

@@ -17,7 +17,7 @@ class UpdatePlatoCommand:
 class UpdatePlatoHandler:
     def __init__(self, plato: PlatoRepository):
         self._plato = plato
-        
+
     async def handle(self, cmd: UpdatePlatoCommand):
         plato = Plato(
             id=cmd.id,
@@ -27,6 +27,5 @@ class UpdatePlatoHandler:
             day=cmd.day,
             description=cmd.description or None,
         )
-        
-        await self._plato.update(plato)
-        return plato
+
+        return await self._plato.update(plato)

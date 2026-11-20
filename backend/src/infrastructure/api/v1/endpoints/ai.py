@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -32,4 +34,11 @@ def generate_text(
             detail="No fue posible conectarse al sistema de mensajería",
         ) from exc
 
+    except Exception:
+        logging.getLogger(__name__).exception("Falló la generación de IA user_id=%s", current_user.id)
+
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al generar respuesta"
+        )
     return {"status": "success", "response": result}

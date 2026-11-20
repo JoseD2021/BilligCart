@@ -14,5 +14,4 @@ class CreateMenuHandler:
 
     async def handle(self, cmd: CreateMenuCommand) -> Menu:
         menu = Menu.default(user_id=cmd.user_id)
-        await self._menu.create(menu)
-        return menu
+        return await self._menu.create(menu)

@@ -1,8 +1,9 @@
 from supabase import AsyncClient
 
 from src.domain.entities.plato import Plato
-from src.domain.errors import InvalidRequestBodyError
+from src.domain.errors import ResourceNotFound
 from src.domain.repositories.plato_repository import PlatoRepository
+from src.infrastructure.supabase.repositories.mappers import plato_entity
 
 TABLE = "Plato"
 
@@ -18,20 +19,18 @@ class SupabasePlatoRepository(PlatoRepository):
             "day": plato.day,
             "description": plato.description
         }
-        
-        self._validations(plato)
-        
+
+
         res = (
             await self._client.table(TABLE)
             .insert(payload)
             .execute()
         )
-        
-        return res.data[0]
-            
+
+        return plato_entity(res.data[0])
+
     async def update(self, plato: Plato) -> Plato:
-        self._validations(plato)
-        
+
         res = (
             await self._client.table(TABLE)
             .update({
@@ -44,12 +43,12 @@ class SupabasePlatoRepository(PlatoRepository):
             .eq("id", plato.id)
             .execute()
         )
-        
+
         if len(res.data) == 0:
-            raise InvalidRequestBodyError(f"Plato with id {plato.id} not found")
-        
-        return res.data[0]
-    
+            raise ResourceNotFound(f"Plato with id {plato.id} not found")
+
+        return plato_entity(res.data[0])
+
     async def get_by_menu_day(self, menu_id: int, day: int) -> list[Plato]:
         res = (
             await self._client.table(TABLE)
@@ -58,18 +57,12 @@ class SupabasePlatoRepository(PlatoRepository):
             .eq("day", day)
             .execute()
         )
-        
-        return [Plato(**plato) for plato in res.data]
-    
+
+        return [plato_entity(plato) for plato in res.data]
+
+    async def get_by_id(self, id: int) -> Plato | None:
+        res = await self._client.table(TABLE).select("*").eq("id", id).execute()
+        return plato_entity(res.data[0]) if res and res.data else None
+
     async def delete_by_id(self, id: int) -> None:
-        if not isinstance(id, int) or id <= 0:
-            raise InvalidRequestBodyError("id must be a positive integer")
-        
         await self._client.table(TABLE).delete().eq("id", id).execute()
-    
-    def _validations(self, plato: Plato) -> None:
-        if plato.day < 1 or plato.day > 7:
-            raise InvalidRequestBodyError("Day must be between 1 and 7")
-        
-        if len(plato.name) == 0:
-            raise InvalidRequestBodyError("Name cannot be empty")

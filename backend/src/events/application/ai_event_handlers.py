@@ -33,6 +33,10 @@ async def on_menu_generation_completed(
         event.duration_ms,
     )
 
+    if not event.persist_via_events:
+        # La API espera y persiste antes de responder en /menu/generate.
+        return
+
     if not event.user_id or not event.response:
         logger.warning(
             "El evento no trae user_id o respuesta; no se guarda el menú. "
