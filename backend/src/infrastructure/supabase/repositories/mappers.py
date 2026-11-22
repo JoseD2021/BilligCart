@@ -26,7 +26,7 @@ def plato_entity(row: dict) -> Plato:
 
 def ingrediente_entity(row: dict) -> Ingrediente:
     return Ingrediente(
-        id=row["id"], name=row["name"], last_updated=timestamp(row["last_updated"]),
+        id=row["id"], name=row["name"], last_updated=timestamp(row["last_updated"]), last_fetched=timestamp(row.get("last_fetched")),
         shop=Tienda(row["shop"]) if row.get("shop") else None,
         price=float(row["price"]) if row.get("price") is not None else None,
         url=row.get("url"),
