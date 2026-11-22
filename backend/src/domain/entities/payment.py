@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Payment contracts, independent of the gateway and the final order schema."""
 from dataclasses import dataclass
 from datetime import datetime

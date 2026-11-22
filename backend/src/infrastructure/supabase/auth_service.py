@@ -1,9 +1,11 @@
+import logging
 from typing import Any
 
 from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
 
 from src.application.interfaces.auth_service import AuthService, AuthSession
 from src.domain.entities.user import User
+from src.domain.enums.role import UserRole
 from src.domain.errors import (
     EmailAlreadyRegistered,
     InvalidCredentials,
@@ -29,7 +31,7 @@ class SupabaseAuthService(AuthService):
                     raise InvalidEmail(e.message)
                 case _:
                     raise
-        return User(id=res.user.id, email=res.user.email)
+        return User(id=res.user.id, email=res.user.email, role=UserRole.USER.value)
 
     async def sign_in(self, email, password) -> AuthSession:
         try:
@@ -44,6 +46,19 @@ class SupabaseAuthService(AuthService):
                     raise
         return AuthSession(res.session.access_token, res.session.refresh_token)
 
+    async def _get_role(self, user_id: str) -> str:
+        log = logging.getLogger(__name__)
+        uid = str(user_id)
+        try:
+            res = await self._client.table("Roles").select("rol").eq("user_id", uid).limit(1).execute()
+            raw_role = res.data[0].get("rol") if res.data else None
+        except Exception:
+            log.exception("No se pudo leer rol desde tabla Roles user_id=%s", uid)
+            raw_role = None
+        role = UserRole.from_value(raw_role).value
+        log.info("Rol resuelto user_id=%s role=%s", uid, role)
+        return role
+
     async def get_user_from_token(self, token) -> User:
         try:
             res = await self._client.auth.get_user(token)
@@ -51,5 +66,5 @@ class SupabaseAuthService(AuthService):
             raise InvalidCredentials("Token inválido o expirado")
         if res is None or res.user is None:
             raise InvalidCredentials("Token inválido o expirado")
-        return User(id=res.user.id, email=res.user.email,
-                    role=(res.user.app_metadata or {}).get("role", "user"))
+        role = await self._get_role(res.user.id)
+        return User(id=res.user.id, email=res.user.email, role=role)

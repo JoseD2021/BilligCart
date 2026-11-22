@@ -61,5 +61,11 @@ class AccessDenied(DomainError):
 
 class OrderNotReady(DomainError):
     pass
+
+
+class InvalidOrderState(DomainError):
+    pass
+
+
 class AIServiceError(Exception):
     """El servicio de IA no pudo procesar la solicitud."""

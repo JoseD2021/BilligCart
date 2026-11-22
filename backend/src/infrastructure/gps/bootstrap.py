@@ -46,7 +46,6 @@ def build_gps_container(
     settings: GpsSettings,
     clock: Clock | None = None,
 ) -> GpsContainer:
-    # El registro y el almacén se crean UNA vez: todas las conexiones deben compartirlos.
     registry = InMemoryTrackingRegistry()
     store = InMemoryLocationStore()
     background = BackgroundPublisher(events)
@@ -56,12 +55,13 @@ def build_gps_container(
         settings.throttle_heartbeat_s,
     )
     interval = settings.stream_interval_ms
+    idle_interval = max(int(settings.throttle_interval_s * 1000), interval)
 
     return GpsContainer(
         auth=auth,
         subscribe=SubscribeToTrackingHandler(access, registry, store, interval),
-        unsubscribe=UnsubscribeFromTrackingHandler(registry),
-        connect_courier=ConnectCourierHandler(access, registry, interval),
+        unsubscribe=UnsubscribeFromTrackingHandler(registry, idle_interval),
+        connect_courier=ConnectCourierHandler(access, registry, interval, idle_interval),
         disconnect_courier=DisconnectCourierHandler(registry, store, background),
         receive_location=ReceiveCourierLocationHandler(
             registry, store, background, throttle, clock or SystemClock()

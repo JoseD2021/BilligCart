@@ -21,7 +21,7 @@ class SubscribeToTrackingCommand:
 
 
 class SubscribeToTrackingHandler:
-    """El cliente abre el mapa: se registra y se le pide al repartidor que transmita."""
+    """El cliente abre el mapa: se registra y se le pide al repartidor modo live."""
 
     def __init__(
         self,
@@ -44,7 +44,7 @@ class SubscribeToTrackingHandler:
 
         await cmd.sink.send(messages.courier_status(courier is not None))
         last = await self._store.latest(cmd.order_id)
-        if last is not None:  # el mapa muestra algo de inmediato
+        if last is not None:
             await cmd.sink.send(messages.location(cmd.order_id, last))
-        if courier is not None:  # idempotente en el repartidor
-            await safe_send(courier, messages.start_streaming(self._interval))
+        if courier is not None:
+            await safe_send(courier, messages.start_streaming(self._interval, "live"))

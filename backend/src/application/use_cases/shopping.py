@@ -7,7 +7,7 @@ from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
 from src.application.use_cases.preferences import PreferencesUseCase
 from src.domain.entities.compra import ShoppingItem, ShoppingList
 from src.domain.entities.pedido import Pedido
-from src.domain.errors import OrderNotReady, ResourceNotFound
+from src.domain.errors import AccessDenied, InvalidOrderState, InvalidRequestBodyError, OrderNotReady, ResourceNotFound
 from src.domain.repositories.pedido_repository import PedidoRepository
 
 # Las cantidades se agregan en una unidad común; el precio del catálogo es
@@ -57,7 +57,7 @@ class ShoppingUseCase:
                               sort_keys=True, ensure_ascii=False)
         key = hashlib.sha256(snapshot.encode()).hexdigest()
         return await self.orders.create(Pedido(str(uuid4()), user_id, shopping.menu_id, key,
-                                               shopping.items, shopping.total))
+                                               shopping.items, shopping.total, estado="pendiente"))
 
     async def current_order(self, user_id: str):
         return await self.orders.get_current(user_id)
@@ -67,3 +67,31 @@ class ShoppingUseCase:
         if order is None:
             raise ResourceNotFound("Pedido no encontrado.")
         return order
+
+    async def available_for_courier(self):
+        return await self.orders.list_available()
+
+    async def assigned_to_courier(self, courier_id: str):
+        return await self.orders.list_assigned(courier_id)
+
+    async def accept(self, courier_id: str, order_id: str, courier_name: str | None = None):
+        order = await self.orders.assign(order_id, courier_id, courier_name)
+        if order is None:
+            raise ResourceNotFound("Pedido no encontrado.")
+        if order.repartidor_id != courier_id:
+            raise AccessDenied("El pedido ya fue tomado por otro repartidor.")
+        return order
+
+    async def update_status(self, courier_id: str, order_id: str, estado: str):
+        if estado not in ("confirmado", "en_camino", "entregado"):
+            raise InvalidRequestBodyError("Estado inválido.")
+        current = await self.orders.get_by_id_for_courier(courier_id, order_id)
+        if current is None:
+            raise ResourceNotFound("Pedido no encontrado o no asignado.")
+        allowed = {"confirmado": {"confirmado", "en_camino"}, "en_camino": {"en_camino", "entregado"}, "entregado": {"entregado"}}
+        if estado not in allowed.get(current.estado, set()):
+            raise InvalidOrderState(f"No se puede pasar de {current.estado} a {estado}.")
+        updated = await self.orders.update_estado(order_id, courier_id, estado)
+        if updated is None:
+            raise ResourceNotFound("Pedido no encontrado o no asignado.")
+        return updated

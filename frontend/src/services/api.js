@@ -17,6 +17,9 @@ let authToken = null;
 export function setAuthToken(token) {
   authToken = token;
 }
+export function getAuthToken() {
+  return authToken;
+}
 
 // Mensajes en español para los errores de dominio que devuelve el backend:
 // { "error": "<NombreDelError>", "message": "..." }
@@ -67,6 +70,11 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+export const WS_BASE_URL =
+  Platform.OS === "web"
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`
+    : (process.env.EXPO_PUBLIC_WS_URL ?? (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost").replace(/^http/, "ws").replace(/\/api\/v1\/?$/, "").replace(/\/v1\/?$/, ""));
+
 export const api = {
   solicitarPago: (orderId, key) => request("/pagos", {
     method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ order_id: orderId }),
@@ -80,4 +88,11 @@ export const api = {
   confirmarCompra: () => request("/compras/confirmar", { method: "POST" }),
   getPedidoActual: () => request("/pedidos/current"),
   getEstadoPedido: (id) => request(`/pedidos/${encodeURIComponent(id)}/estado`),
+  getMe: () => request("/auth/me"),
+  getPedidosDisponibles: () => request("/repartidor/pedidos/disponibles"),
+  getPedidosAsignados: () => request("/repartidor/pedidos/asignados"),
+  aceptarPedido: (id) => request(`/repartidor/pedidos/${encodeURIComponent(id)}/aceptar`, { method: "POST" }),
+  actualizarEstadoPedido: (id, estado) => request(`/repartidor/pedidos/${encodeURIComponent(id)}/estado`, {
+    method: "PATCH", body: JSON.stringify({ estado }),
+  }),
 };

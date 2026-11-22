@@ -84,15 +84,16 @@ class RepositoryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(user.role, "user")
 
     async def test_duplicate_checkout_does_not_overwrite_order_status(self):
-        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "etapa": 2}
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "en_camino"}
         client, query = database(row)
         result = await SupabasePedidoRepository(client).create(Pedido("new-order", "user", 1, "key", [], 5000))
         self.assertTrue(query.upsert.call_args.kwargs["ignore_duplicates"])
+        self.assertEqual(result.estado, "en_camino")
         self.assertEqual(result.etapa, 2)
         self.assertEqual(result.id, "order")
 
     async def test_order_read_always_filters_owner(self):
-        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "etapa": 0}
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "pendiente"}
         client, query = database(row)
         await SupabasePedidoRepository(client).get_by_id("user", "order")
         query.eq.assert_any_call("user_id", "user")

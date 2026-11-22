@@ -187,6 +187,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         data.ingredients[1] = replace(data.ingredients[1], price=5000)
         order = await shopping.confirm(USER.id)
         self.assertEqual(order.user_id, USER.id)
+        self.assertEqual(order.estado, "pendiente")
         self.assertEqual(order.etapa, 0)
         self.assertIsNone(order.repartidor)
         self.assertEqual(order.total, 5000)

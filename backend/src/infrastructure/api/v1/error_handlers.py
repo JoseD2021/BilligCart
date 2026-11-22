@@ -13,6 +13,7 @@ from src.domain.errors import (
     IngredienteRecentlyUpdated,
     InvalidCredentials,
     InvalidEmail,
+    InvalidOrderState,
     InvalidRequestBodyError,
     MenuGenerationError,
     OrderNotReady,
@@ -33,6 +34,7 @@ STATUS_BY_ERROR = {
     ResourceNotFound: 404,
     IngredienteNotFound: 404,
     OrderNotReady: 409,
+    InvalidOrderState: 409,
     MenuGenerationError: 502,
 }
 
