@@ -123,6 +123,6 @@ class SupabasePedidoRepository(PedidoRepository):
             items=[ShoppingItem(**item) for item in row.get("items", []) or []],
             total=float(row.get("total", 0) or 0), estado=estado,
             repartidor_id=str(row["repartidor_id"]) if row.get("repartidor_id") else None,
-            repartidor=row.get("repartidor"), tiempo_estimado=row.get("tiempo_estimado"),
+            repartidor=row.get("repartidor"),
             created_at=timestamp(row.get("created_at")), ubicacion=ubicacion_data,
         )

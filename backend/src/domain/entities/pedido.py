@@ -19,6 +19,5 @@ class Pedido:
     estado: str = "pendiente"
     repartidor_id: str | None = None
     repartidor: str | None = None
-    tiempo_estimado: str | None = None
     created_at: datetime | None = None
     ubicacion: dict | None = None

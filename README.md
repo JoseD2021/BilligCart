@@ -108,6 +108,8 @@ RABBITMQ_VHOST=/
 
 Asegúrate de que Ollama tenga disponible el modelo indicado por `OLLAMA_MODEL`.
 
+Al levantar el backend, `ollama-init` descarga el modelo y lo precarga en VRAM con `keep_alive=-1`; además, el servicio `ollama` usa `OLLAMA_KEEP_ALIVE=-1`, por lo que el modelo no se descarga por inactividad. Verifícalo con `docker compose exec ollama ollama ps`: la columna `UNTIL` debe indicar `Forever`. Si Ollama se reinicia, el cliente carga el modelo de nuevo en la primera solicitud y lo mantiene con la misma retención.
+
 ## Ejecución
 
 El backend y el frontend se ejecutan desde **dos terminales distintas**.
@@ -166,7 +168,7 @@ Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recur
 | `GET /pedidos/current` | Último pedido propio, o `null` |
 | `GET /pedidos/{id}/estado` | Consultar un pedido propio |
 
-Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. Con `ultimos_fetch`, el frontend solicita una nueva cotización solo para los ingredientes sin fetch o con más de 7 días, tanto en Lista de compras como en Carrito; ante un fallo individual lo reintenta cuando el usuario vuelve a entrar o pulsa "Actualizar precios". La confirmación requiere el menú completo. Si faltan precios, el usuario puede marcar explícitamente `omitir_sin_precio` en Carrito para pagar solo los ingredientes cotizados: el pedido y su total excluyen los pendientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra el estado guardado (`pendiente`, `confirmado`, `en_camino`, `entregado`), con repartidor y tiempo estimado solo cuando existen en la base de datos. El servicio de operación o reparto debe actualizar esos campos. La columna `estado` es la única fuente de verdad; la migración `002_unify_pedido_estado.sql` elimina la antigua columna `etapa` y migra sus valores.
+Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. Con `ultimos_fetch`, el frontend solicita una nueva cotización solo para los ingredientes sin fetch o con más de 7 días, tanto en Lista de compras como en Carrito; ante un fallo individual lo reintenta cuando el usuario vuelve a entrar o pulsa "Actualizar precios". La confirmación requiere el menú completo. Si faltan precios, el usuario puede marcar explícitamente `omitir_sin_precio` en Carrito para pagar solo los ingredientes cotizados: el pedido y su total excluyen los pendientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra el estado guardado (`pendiente`, `confirmado`, `en_camino`, `entregado`) y el repartidor cuando está asignado. El antiguo campo `tiempo_estimado` ya no se utiliza. La columna `estado` es la única fuente de verdad; la migración `002_unify_pedido_estado.sql` elimina la antigua columna `etapa` y migra sus valores.
 
 La API registra método, ruta, estado, duración e identificador de solicitud, que también devuelve en `X-Request-ID`. No registra contraseñas, tokens ni cuerpos. Los detalles de errores de persistencia quedan en los logs del servidor.
 

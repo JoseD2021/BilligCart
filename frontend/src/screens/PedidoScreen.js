@@ -108,7 +108,6 @@ export default function PedidoScreen({ route }) {
       <Text style={typography.h1}>Tu pedido</Text>
       <Text style={[typography.bodyMuted, { marginBottom: spacing.md }]}>
         {pedido.repartidor ? `Repartidor: ${pedido.repartidor}` : "Repartidor pendiente de asignación"}
-        {pedido.tiempo_estimado ? ` · Llega en ${pedido.tiempo_estimado}` : ""}
       </Text>
       <Card>
         {ESTADOS.map(({ clave, etiqueta }, i) => {
