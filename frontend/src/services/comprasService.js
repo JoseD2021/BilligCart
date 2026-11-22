@@ -19,6 +19,6 @@ export async function getListaCompras({ refrescar = true, onLista = () => {}, on
   return { lista, actualizacion };
 }
 
-export function confirmarCompra() {
-  return api.confirmarCompra();
+export function confirmarCompra({ omitirSinPrecio = false } = {}) {
+  return api.confirmarCompra(omitirSinPrecio);
 }

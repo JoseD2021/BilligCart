@@ -22,6 +22,7 @@ export default function CarritoScreen({ navigation }) {
   const [confirmando, setConfirmando] = useState(false);
   const [actualizando, setActualizando] = useState(false);
   const [avisoPrecios, setAvisoPrecios] = useState(null);
+  const [omitirSinPrecio, setOmitirSinPrecio] = useState(false);
   const [envio, setEnvio] = useState({ direccion: "", referencia: "", lat: null, lng: null });
 
   // Productos y precios: salen de /compras. El servicio consulta precios viejos
@@ -31,6 +32,7 @@ export default function CarritoScreen({ navigation }) {
     setCargando(true);
     setError(null);
     setAvisoPrecios(null);
+    setOmitirSinPrecio(false);
     getListaCompras({
       refrescar,
       onLista: (datos) => {
@@ -63,7 +65,7 @@ export default function CarritoScreen({ navigation }) {
     if (confirmando) return;
     setConfirmando(true);
     try {
-      setPedido(await confirmarCompra()); // crea el pedido; Stripe cobra sobre ese pedido
+      setPedido(await confirmarCompra({ omitirSinPrecio })); // crea el pedido; Stripe cobra sobre ese pedido
       setPaso(2);
     } catch (e) {
       Alert.alert("No se pudo confirmar", e.message);
@@ -104,6 +106,10 @@ export default function CarritoScreen({ navigation }) {
 
   const excedePresupuesto = lista.presupuesto > 0 && lista.total > lista.presupuesto;
   const hayPreciosPorActualizar = idsParaActualizar(lista).length > 0;
+  const itemsSinPrecio = lista.items.filter((item) => item.precio == null);
+  const puedeConfirmar = lista.puede_confirmar
+    || (lista.menu_completo && omitirSinPrecio && itemsSinPrecio.length > 0
+        && itemsSinPrecio.length < lista.items.length);
 
   return (
     <View style={styles.screen}>
@@ -186,13 +192,37 @@ export default function CarritoScreen({ navigation }) {
             <Text style={typography.bodyMuted}>
               Precios de referencia de los productos encontrados. El costo final depende de la presentación y la cantidad comprada.
             </Text>
-            {lista.precios_pendientes > 0 && (
-              <Text style={styles.avisoTexto}>Faltan precios para {lista.precios_pendientes} ingredientes.</Text>
+            {itemsSinPrecio.length > 0 && (
+              <View style={styles.avisoIngredientes}>
+                <Text style={styles.avisoTexto}>Faltan precios para estos ingredientes:</Text>
+                {itemsSinPrecio.map((item) => (
+                  <Text key={item.id} style={typography.bodyMuted}>
+                    • {item.nombre} — {item.cantidad} {item.unidad}
+                  </Text>
+                ))}
+                {itemsSinPrecio.length < lista.items.length ? (
+                  <TouchableOpacity onPress={() => setOmitirSinPrecio((valor) => !valor)} style={styles.opcionFila}>
+                    <View style={[styles.checkCaja, omitirSinPrecio && styles.checkActivo]}>
+                      {omitirSinPrecio && <Text style={styles.checkMarca}>✓</Text>}
+                    </View>
+                    <Text style={typography.body}>No incluirlos y pagar solo los demás ingredientes</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.avisoTexto}>No hay ingredientes con precio para confirmar.</Text>
+                )}
+                {!lista.menu_completo && (
+                  <Text style={styles.avisoTexto}>Completa el menú semanal para poder confirmar.</Text>
+                )}
+                {lista.menu_completo && omitirSinPrecio && (
+                  <Text style={typography.bodyMuted}>El pedido y el total excluirán los ingredientes listados.</Text>
+                )}
+              </View>
             )}
           </ScrollView>
           <Footer
-            boton={confirmando ? "Confirmando..." : "Confirmar y pagar"}
-            deshabilitado={!lista.puede_confirmar || confirmando}
+            boton={confirmando ? "Confirmando..." : (omitirSinPrecio && itemsSinPrecio.length
+              ? "Confirmar y pagar sin estos ingredientes" : "Confirmar y pagar")}
+            deshabilitado={!puedeConfirmar || confirmando}
             onPress={confirmar}
             atras={() => setPaso(0)}
           />
@@ -255,6 +285,16 @@ const styles = StyleSheet.create({
   stepTexto: { fontSize: 12, color: colors.textMuted },
   fila: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   avisoPresupuesto: { backgroundColor: "#FCEAE6", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  avisoIngredientes: {
+    backgroundColor: "#FCEAE6", borderRadius: radius.sm, padding: spacing.md, marginTop: spacing.sm,
+  },
+  opcionFila: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
+  checkCaja: {
+    width: 20, height: 20, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary,
+    alignItems: "center", justifyContent: "center",
+  },
+  checkActivo: { backgroundColor: colors.primary },
+  checkMarca: { color: colors.white, fontWeight: "700", fontSize: 13 },
   avisoTexto: { color: colors.warning, fontSize: 13, fontWeight: "600", marginTop: spacing.sm },
   accionesProductos: { paddingHorizontal: spacing.lg },
   actualizando: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },

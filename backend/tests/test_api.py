@@ -141,6 +141,18 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json()["name"], "Arroz")
         handler.handle.assert_awaited_once_with(ScrapeIngredienteCommand(user_id=USER.id, id=1))
 
+    def test_confirm_accepts_explicit_partial_confirmation(self):
+        use_case = SimpleNamespace(confirm=AsyncMock(return_value={"id": "order-1"}))
+        self.app.dependency_overrides[deps.get_shopping_use_case] = self.override(use_case)
+
+        response = self.client.post("/v1/compras/confirmar", json={"omitir_sin_precio": True}, headers=self.headers)
+        self.assertEqual(response.status_code, 201, response.text)
+        use_case.confirm.assert_awaited_with(USER.id, True)
+
+        response = self.client.post("/v1/compras/confirmar", headers=self.headers)
+        self.assertEqual(response.status_code, 201, response.text)
+        use_case.confirm.assert_awaited_with(USER.id, False)
+
     def test_preferences_use_authenticated_user_and_reject_user_id(self):
         response = self.client.put("/v1/preferencias", json={"restricciones": ["Sin gluten"], "presupuesto_semanal": 20000}, headers=self.headers)
         self.assertEqual(response.status_code, 200, response.text)

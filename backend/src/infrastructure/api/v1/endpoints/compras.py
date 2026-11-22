@@ -17,6 +17,11 @@ class EstadoPedidoRequest(BaseModel):
     estado: str
 
 
+class ConfirmarCompraRequest(BaseModel):
+    # El usuario acepta explícitamente dejar fuera los ingredientes sin precio.
+    omitir_sin_precio: bool = False
+
+
 def require_courier(user):
     if getattr(user, "role_enum", UserRole.USER) is not UserRole.REPARTIDOR:
         raise AccessDenied("Solo repartidores pueden realizar esta acción.")
@@ -29,8 +34,9 @@ async def shopping_list(user=Depends(get_current_user), use_case=Depends(get_sho
 
 
 @router.post("/compras/confirmar", status_code=201)
-async def confirm(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
-    return await use_case.confirm(user.id)
+async def confirm(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case),
+                  body: ConfirmarCompraRequest | None = None):
+    return await use_case.confirm(user.id, body.omitir_sin_precio if body else False)
 
 
 @router.get("/pedidos/current")
