@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from src.application.commands.ingrediente.update_fetch_ingrediente import (
     UpdateFetchIngredientCommand,
@@ -38,11 +38,12 @@ class ScrapeIngredienteHandler:
         if ing is None:
             raise IngredienteNotFound(cmd.id)
 
-        if ing.last_updated is not None and ing.shop is not None:
-            lastUpdateDiff = datetime.now(UTC) - ing.last_updated
+        last_updated = ing.last_updated
+        if last_updated.tzinfo is None:
+            last_updated = last_updated.replace(tzinfo=UTC)
 
-            if lastUpdateDiff.days < self._DAYS_TO_UPDATE:
-                raise IngredienteRecentlyUpdated(cmd.id, ing.last_updated)
+        if ing.shop is not None and (datetime.now(UTC) - last_updated) < timedelta(days=self._DAYS_TO_UPDATE):
+            raise IngredienteRecentlyUpdated(cmd.id, last_updated)
 
         ofertas = [o for r in await asyncio.gather(
             *(self._buscar(builder=b, termino=ing.name, limit=5) for b in self._builders)
