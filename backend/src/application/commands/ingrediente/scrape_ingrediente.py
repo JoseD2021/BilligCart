@@ -22,6 +22,7 @@ from src.domain.repositories.ingrediente_repository import IngredienteRepository
 
 @dataclass(frozen=True)
 class ScrapeIngredienteCommand:
+    user_id: str
     id: int
 
 class ScrapeIngredienteHandler:
@@ -34,6 +35,8 @@ class ScrapeIngredienteHandler:
         self._update_fetch = update_fetch
 
     async def handle(self, cmd: ScrapeIngredienteCommand) -> Ingrediente:
+        logging.getLogger(__name__).info("probando scraping para ingr ID %s para usuario %s", cmd.id, cmd.user_id)
+        
         ing = await self._ingr.get_by_id(cmd.id)
         if ing is None:
             raise IngredienteNotFound(cmd.id)
