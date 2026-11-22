@@ -6,7 +6,12 @@ import PaymentPanel from "../components/PaymentPanel";
 import { colors, radius, spacing, typography } from "../theme/theme";
 import { api, WS_BASE_URL, getAuthToken } from "../services/api";
 
-const ETAPAS = ["Pendiente", "Confirmado", "En camino", "Entregado"];
+const ESTADOS = [
+  { clave: "pendiente", etiqueta: "Pendiente" },
+  { clave: "confirmado", etiqueta: "Confirmado" },
+  { clave: "en_camino", etiqueta: "En camino" },
+  { clave: "entregado", etiqueta: "Entregado" },
+];
 
 function TrackingMap({ location, courierOnline }) {
   const ref = useRef(null);
@@ -106,12 +111,13 @@ export default function PedidoScreen({ route }) {
         {pedido.tiempo_estimado ? ` · Llega en ${pedido.tiempo_estimado}` : ""}
       </Text>
       <Card>
-        {ETAPAS.map((etapa, i) => {
-          const completada = i <= (pedido.etapa ?? 0);
+        {ESTADOS.map(({ clave, etiqueta }, i) => {
+          const actual = ESTADOS.findIndex(({ clave: c }) => c === pedido.estado);
+          const completada = i <= (actual < 0 ? 0 : actual);
           return (
-            <View key={etapa} style={styles.paso}>
+            <View key={clave} style={styles.paso}>
               <View style={[styles.punto, completada && styles.puntoActivo]} />
-              <Text style={[typography.body, completada && styles.textoActivo]}>{etapa}</Text>
+              <Text style={[typography.body, completada && styles.textoActivo]}>{etiqueta}</Text>
             </View>
           );
         })}

@@ -83,7 +83,7 @@ El frontend utiliza Expo. Si en `frontend/package.json` aparece `"expo": "~51.0.
 1. Clona el repositorio y entra en la carpeta del proyecto.
 2. Crea un archivo `.env` usando `.env.example` como referencia.
 3. Sustituye los valores de ejemplo por tus credenciales. No subas el `.env` ni publiques claves o contraseñas reales.
-4. Ejecuta `backend/migrations/001_backend_owned_flows.sql` en el editor SQL de Supabase. Añade preferencias y pedidos y restringe el acceso directo a las tablas.
+4. Ejecuta en el editor SQL de Supabase, en orden, `backend/migrations/001_backend_owned_flows.sql`, `002_unify_pedido_estado.sql` y `003_roles.sql`. Añaden preferencias, pedidos y roles, unifican el estado del pedido y restringen el acceso directo a las tablas.
 5. Usa una clave de servidor (`service_role` o `sb_secret_...`) en `SUPABASE_KEY`. El frontend solo necesita una clave pública de Supabase Auth; las consultas de negocio usan la API.
 
 Las variables definidas en `.env.example` son:
@@ -151,10 +151,12 @@ El menú semanal contempla siete días con desayuno, almuerzo y cena: **21 plato
 
 ## Acceso y rutas de la aplicación
 
-Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo y actualizar precios con `POST /ingrediente/fetch/{id}`, pero crear, editar o borrar ingredientes requiere `rol = "admin"` en la tabla `public."Roles"` (clave primaria `user_id` = UID de Supabase Auth), asignada desde un servidor de confianza. `GET /auth/me` devuelve ese mismo rol. No se utiliza `user_metadata` ni `app_metadata` para conceder permisos.
+Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo y actualizar precios con `POST /ingrediente/fetch/{id}`, pero crear, editar o borrar ingredientes requiere `rol = "admin"` en la tabla `public."Roles"` (clave primaria `user_id` = UID de Supabase Auth), asignada desde un servidor de confianza. El registro elige solo entre `user` y `repartidor` (`POST /auth/register` con `role`), lo escribe en `Roles` con la clave de servicio y devuelve el token de sesión cuando Supabase no exige confirmación de correo; `admin` no se puede autoasignar. `GET /auth/me` devuelve ese mismo rol. No se utiliza `user_metadata` ni `app_metadata` para conceder permisos.
 
 | Ruta relativa a `/api/v1` | Uso |
 |---|---|
+| `POST /auth/register` | Crear usuario con `role: "user"` o `"repartidor"` y persistirlo en `Roles` |
+| `GET /auth/me` | Usuario autenticado con su rol desde `Roles` |
 | `GET /menu/weekly` | Menú completo del usuario, con platos e ingredientes |
 | `POST /menu/generate` | Generar con preferencias y devolver el resultado persistido |
 | `GET /preferencias`, `PUT /preferencias` | Consultar y guardar las preferencias propias |
@@ -164,7 +166,7 @@ Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recur
 | `GET /pedidos/current` | Último pedido propio, o `null` |
 | `GET /pedidos/{id}/estado` | Consultar un pedido propio |
 
-Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. Con `ultimos_fetch`, el frontend solicita una nueva cotización solo para los ingredientes sin fetch o con más de 7 días, tanto en Lista de compras como en Carrito; ante un fallo individual lo reintenta cuando el usuario vuelve a entrar o pulsa "Actualizar precios". La confirmación requiere el menú completo. Si faltan precios, el usuario puede marcar explícitamente `omitir_sin_precio` en Carrito para pagar solo los ingredientes cotizados: el pedido y su total excluyen los pendientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra la etapa guardada (`0` confirmado, `1` preparando, `2` en camino, `3` entregado), con repartidor y tiempo estimado solo cuando existen en la base de datos. El servicio de operación o reparto debe actualizar esos campos.
+Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. Con `ultimos_fetch`, el frontend solicita una nueva cotización solo para los ingredientes sin fetch o con más de 7 días, tanto en Lista de compras como en Carrito; ante un fallo individual lo reintenta cuando el usuario vuelve a entrar o pulsa "Actualizar precios". La confirmación requiere el menú completo. Si faltan precios, el usuario puede marcar explícitamente `omitir_sin_precio` en Carrito para pagar solo los ingredientes cotizados: el pedido y su total excluyen los pendientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra el estado guardado (`pendiente`, `confirmado`, `en_camino`, `entregado`), con repartidor y tiempo estimado solo cuando existen en la base de datos. El servicio de operación o reparto debe actualizar esos campos. La columna `estado` es la única fuente de verdad; la migración `002_unify_pedido_estado.sql` elimina la antigua columna `etapa` y migra sus valores.
 
 La API registra método, ruta, estado, duración e identificador de solicitud, que también devuelve en `X-Request-ID`. No registra contraseñas, tokens ni cuerpos. Los detalles de errores de persistencia quedan en los logs del servidor.
 

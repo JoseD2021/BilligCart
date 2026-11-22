@@ -6,7 +6,6 @@ from datetime import datetime
 from src.domain.entities.compra import ShoppingItem
 
 ESTADOS_PEDIDO = ("pendiente", "confirmado", "en_camino", "entregado")
-ETAPA_POR_ESTADO = {estado: i for i, estado in enumerate(ESTADOS_PEDIDO)}
 
 
 @dataclass(frozen=True)
@@ -23,7 +22,3 @@ class Pedido:
     tiempo_estimado: str | None = None
     created_at: datetime | None = None
     ubicacion: dict | None = None
-
-    @property
-    def etapa(self) -> int:
-        return ETAPA_POR_ESTADO.get(self.estado, 0)

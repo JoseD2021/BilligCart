@@ -13,7 +13,8 @@ create table if not exists public."Pedidos" (
     checkout_key text not null,
     items jsonb not null,
     total numeric not null check (total >= 0),
-    etapa smallint not null default 0 check (etapa between 0 and 3),
+    estado text not null default 'pendiente' constraint pedidos_estado_check
+        check (estado in ('pendiente', 'confirmado', 'en_camino', 'entregado')),
     repartidor_id uuid references auth.users(id),
     repartidor text,
     tiempo_estimado text,
@@ -26,7 +27,8 @@ alter table public."Pedidos"
     add column if not exists checkout_key text,
     add column if not exists items jsonb not null default '[]'::jsonb,
     add column if not exists total numeric not null default 0,
-    add column if not exists etapa smallint not null default 0,
+    add column if not exists estado text not null default 'pendiente' constraint pedidos_estado_check
+        check (estado in ('pendiente', 'confirmado', 'en_camino', 'entregado')),
     add column if not exists repartidor text,
     add column if not exists tiempo_estimado text,
     add column if not exists created_at timestamptz not null default now();

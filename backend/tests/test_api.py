@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 
 from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteCommand
+from src.application.interfaces.auth_service import SignUpResult
 from src.domain.entities.ingrediente import Ingrediente
 from src.domain.entities.menu import Menu
 from src.domain.entities.plato import Plato
@@ -26,6 +27,9 @@ class ApiTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
         self.auth = SimpleNamespace(get_user_from_token=AsyncMock(return_value=USER))
+        self.auth.sign_up = AsyncMock(side_effect=lambda email, password, role="user": SignUpResult(
+            User("00000000-0000-0000-0000-000000000003", email, role), None
+        ))
         self.menus = SimpleNamespace(
             get_by_id=AsyncMock(side_effect=lambda id: Menu(date(2026, 11, 9), USER.id if id == 1 else "other", id=id)),
             get_current=AsyncMock(return_value=None),
@@ -85,6 +89,21 @@ class ApiTests(unittest.TestCase):
         self.auth.get_user_from_token.side_effect = InvalidCredentials("expired")
         response = self.client.get("/v1/menu/weekly", headers=self.headers)
         self.assertEqual(response.status_code, 401)
+
+    def test_register_accepts_repartidor_role(self):
+        response = self.client.post("/v1/auth/register", json={
+            "email": "nuevo@example.com", "password": "secret1", "role": "repartidor",
+        })
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual(response.json()["role"], "repartidor")
+        self.auth.sign_up.assert_awaited_once_with("nuevo@example.com", "secret1", "repartidor")
+
+    def test_register_rejects_admin_role(self):
+        response = self.client.post("/v1/auth/register", json={
+            "email": "nuevo@example.com", "password": "secret1", "role": "admin",
+        })
+        self.assertEqual(response.status_code, 422, response.text)
+        self.auth.sign_up.assert_not_awaited()
 
     def test_other_users_menu_cannot_be_read_or_written(self):
         for method, route, body in (

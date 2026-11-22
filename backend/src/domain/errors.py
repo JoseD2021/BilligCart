@@ -19,6 +19,9 @@ class WeakPassword(DomainError):
 class InvalidCredentials(DomainError):
     pass
 
+class InvalidRole(DomainError):
+    pass
+
 class UserNotFound(DomainError):
     pass
 

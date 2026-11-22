@@ -23,7 +23,8 @@ from src.application.use_cases.gps.unsubscribe_from_tracking import (
 )
 from src.domain.entities.gps.errors import InvalidLocation
 from src.domain.entities.user import User
-from src.domain.errors import InvalidCredentials
+from src.domain.enums.role import UserRole
+from src.domain.errors import AccessDenied, InvalidCredentials
 from src.infrastructure.gps.web.websocket_sink import WebSocketSink
 
 if TYPE_CHECKING:
@@ -53,6 +54,11 @@ async def _authenticate(ws: WebSocket, auth: AuthService) -> User:
     if not isinstance(msg, dict) or msg.get("type") != "auth" or not isinstance(msg.get("token"), str):
         raise InvalidCredentials("se esperaba {type:'auth', token}")
     return await auth.get_user_from_token(msg["token"])
+
+
+def require_courier_role(user: User) -> None:
+    if user.role_enum is not UserRole.REPARTIDOR:
+        raise AccessDenied("Solo repartidores pueden conectarse al canal de reparto.")
 
 
 async def _messages(ws: WebSocket) -> AsyncIterator[dict]:
@@ -109,6 +115,7 @@ async def courier_stream(ws: WebSocket, order_id: str) -> None:
     user: User | None = None
     try:
         user = await _authenticate(ws, c.auth)
+        require_courier_role(user)
         await c.connect_courier.handle(ConnectCourierCommand(str(user.id), order_id, sink))
         async for msg in _messages(ws):
             kind = msg.get("type")

@@ -28,6 +28,8 @@ const MENSAJES = {
   EmailAlreadyRegistered: "Ese correo ya tiene una cuenta.",
   InvalidEmail: "El correo no es válido.",
   WeakPassword: "La contraseña es muy débil (mínimo 6 caracteres).",
+  InvalidRole: "El rol seleccionado no es válido.",
+  AccessDenied: "No tienes permiso para realizar esta acción.",
   InvalidRequestBodyError: "Revisa los datos ingresados.",
   BackendUnavailable: "No se pudo conectar con el servidor. ¿Está encendido el backend?",
 };
@@ -76,6 +78,7 @@ export const WS_BASE_URL =
     : (process.env.EXPO_PUBLIC_WS_URL ?? (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost").replace(/^http/, "ws").replace(/\/api\/v1\/?$/, "").replace(/\/v1\/?$/, ""));
 
 export const api = {
+  register: (data) => request("/auth/register", { method: "POST", body: JSON.stringify(data) }),
   solicitarPago: (orderId, key) => request("/pagos", {
     method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ order_id: orderId }),
   }),

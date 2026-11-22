@@ -3,13 +3,19 @@ from typing import Any
 
 from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
 
-from src.application.interfaces.auth_service import AuthService, AuthSession
+from src.application.interfaces.auth_service import (
+    AuthService,
+    AuthSession,
+    SignUpResult,
+)
 from src.domain.entities.user import User
 from src.domain.enums.role import UserRole
 from src.domain.errors import (
     EmailAlreadyRegistered,
     InvalidCredentials,
     InvalidEmail,
+    InvalidRequestBodyError,
+    InvalidRole,
     WeakPassword,
 )
 
@@ -22,7 +28,10 @@ class SupabaseAuthService(AuthService):
         # service key, otherwise RLS hides the rows and roles fall back to user.
         self._role_client = role_client or client
 
-    async def sign_up(self, email, password) -> User:
+    async def sign_up(self, email, password, role=UserRole.USER.value) -> SignUpResult:
+        rol = str(role or "").strip().lower()
+        if rol not in (UserRole.USER.value, UserRole.REPARTIDOR.value):
+            raise InvalidRole("Rol inválido para el registro.")
         try:
             res = await self._client.auth.sign_up({"email": email, "password": password})
         except AuthWeakPasswordError as e:
@@ -35,7 +44,19 @@ class SupabaseAuthService(AuthService):
                     raise InvalidEmail(e.message)
                 case _:
                     raise
-        return User(id=res.user.id, email=res.user.email, role=UserRole.USER.value)
+        if res is None or res.user is None:
+            raise InvalidRequestBodyError("No se pudo crear el usuario.")
+        user = User(id=res.user.id, email=res.user.email, role=rol)
+        await self.assign_role(user.id, rol)
+        session = None
+        if getattr(res, "session", None) is not None:
+            session = AuthSession(res.session.access_token, res.session.refresh_token)
+        return SignUpResult(user, session)
+
+    async def assign_role(self, user_id, role) -> None:
+        await self._role_client.table("Roles").upsert(
+            {"user_id": str(user_id), "rol": role}, on_conflict="user_id"
+        ).execute()
 
     async def sign_in(self, email, password) -> AuthSession:
         try:

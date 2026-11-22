@@ -3,7 +3,7 @@ from dataclasses import asdict
 from supabase import AsyncClient
 
 from src.domain.entities.compra import ShoppingItem
-from src.domain.entities.pedido import ESTADOS_PEDIDO, ETAPA_POR_ESTADO, Pedido
+from src.domain.entities.pedido import ESTADOS_PEDIDO, Pedido
 from src.domain.repositories.pedido_repository import PedidoRepository
 from src.infrastructure.supabase.repositories.mappers import timestamp
 
@@ -17,7 +17,6 @@ class SupabasePedidoRepository(PedidoRepository):
     async def create(self, pedido: Pedido) -> Pedido:
         payload = asdict(pedido)
         payload.pop("created_at")
-        payload.pop("etapa", None)
         payload.pop("ubicacion", None)
         await self.client.table("Pedidos").upsert(
             payload, on_conflict="user_id,checkout_key", ignore_duplicates=True,
@@ -105,10 +104,7 @@ class SupabasePedidoRepository(PedidoRepository):
     @staticmethod
     def _entity(row: dict) -> Pedido:
         raw_estado = row.get("estado")
-        if raw_estado is None:
-            etapa = int(row.get("etapa", 0) or 0)
-            raw_estado = ESTADOS_PEDIDO[min(max(etapa, 0), len(ESTADOS_PEDIDO) - 1)]
-        estado = raw_estado if raw_estado in ETAPA_POR_ESTADO else "pendiente"
+        estado = raw_estado if raw_estado in ESTADOS_PEDIDO else "pendiente"
         ubicacion = row.get("Ubicacion") or row.get("ubicacion")
         if isinstance(ubicacion, list):
             ubicacion = ubicacion[0] if ubicacion else None

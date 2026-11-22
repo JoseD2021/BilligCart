@@ -12,8 +12,11 @@ from src.application.use_cases.gps.subscribe_to_tracking import SubscribeToTrack
 from src.application.use_cases.gps.unsubscribe_from_tracking import UnsubscribeFromTrackingCommand, UnsubscribeFromTrackingHandler
 from src.domain.entities.gps.entities import Location
 from src.domain.entities.gps.policies import PersistenceThrottle
+from src.domain.entities.user import User
+from src.domain.errors import AccessDenied
 from src.events.contracts.gps_events import LocationRecorded
 from src.infrastructure.gps.security.supabase_order_access import SupabaseOrderAccess
+from src.infrastructure.gps.web.routes import require_courier_role
 from src.infrastructure.gps.state.in_memory import InMemoryLocationStore, InMemoryTrackingRegistry
 
 
@@ -37,6 +40,11 @@ class Clock:
 
 
 class GpsTests(unittest.IsolatedAsyncioTestCase):
+    def test_courier_stream_requires_repartidor_role(self):
+        with self.assertRaises(AccessDenied):
+            require_courier_role(User("u1", "user@example.com", "user"))
+        require_courier_role(User("u1", "courier@example.com", "repartidor"))
+
     async def test_subscribe_sends_last_location_and_requests_live_mode(self):
         registry = InMemoryTrackingRegistry()
         store = InMemoryLocationStore()
