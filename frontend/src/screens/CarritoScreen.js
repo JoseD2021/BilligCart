@@ -7,7 +7,8 @@ import Card from "../components/Card";
 import PaymentPanel from "../components/PaymentPanel";
 import SelectorUbicacion from "../components/SelectorUbicacion";
 import { colors, spacing, radius, typography } from "../theme/theme";
-import { api } from "../services/api";
+import { getListaCompras, confirmarCompra } from "../services/comprasService";
+import { idsParaActualizar } from "../services/ingredientesService";
 
 const PASOS = ["Productos", "Total", "Pago", "Envío"];
 const pesos = (n) => `$${Number(n).toLocaleString("es-CO")}`;
@@ -19,17 +20,41 @@ export default function CarritoScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [pedido, setPedido] = useState(null); // se crea al confirmar (paso Total -> Pago)
   const [confirmando, setConfirmando] = useState(false);
+  const [actualizando, setActualizando] = useState(false);
+  const [avisoPrecios, setAvisoPrecios] = useState(null);
   const [envio, setEnvio] = useState({ direccion: "", referencia: "", lat: null, lng: null });
 
-  // Productos y precios: salen de /compras, que arma la lista con los ingredientes del menú semanal.
-  const cargar = useCallback(() => {
+  // Productos y precios: salen de /compras. El servicio consulta precios viejos
+  // antes de mostrar la lista final, igual que en Lista de compras.
+  const cargar = useCallback(({ refrescar = true } = {}) => {
     let active = true;
     setCargando(true);
     setError(null);
-    api.getListaDeCompras()
-      .then((data) => { if (active) setLista(data); })
+    setAvisoPrecios(null);
+    getListaCompras({
+      refrescar,
+      onLista: (datos) => {
+        if (!active) return;
+        setLista(datos);
+        setCargando(false);
+      },
+      onActualizando: () => { if (active) setActualizando(true); },
+    })
+      .then(({ lista: datos, actualizacion }) => {
+        if (!active) return;
+        setLista(datos);
+        if (actualizacion?.actualizados > 0) {
+          setAvisoPrecios(`Precios actualizados para ${actualizacion.actualizados} ingredientes.`);
+        } else if (actualizacion?.errores.length) {
+          setAvisoPrecios(`No se pudieron actualizar ${actualizacion.errores.length} precios. Puedes reintentar.`);
+        }
+      })
       .catch((e) => { if (active) setError(e.message); })
-      .finally(() => { if (active) setCargando(false); });
+      .finally(() => {
+        if (!active) return;
+        setActualizando(false);
+        setCargando(false);
+      });
     return () => { active = false; };
   }, []);
   useFocusEffect(cargar);
@@ -38,7 +63,7 @@ export default function CarritoScreen({ navigation }) {
     if (confirmando) return;
     setConfirmando(true);
     try {
-      setPedido(await api.confirmarCompra()); // crea el pedido; Stripe cobra sobre ese pedido
+      setPedido(await confirmarCompra()); // crea el pedido; Stripe cobra sobre ese pedido
       setPaso(2);
     } catch (e) {
       Alert.alert("No se pudo confirmar", e.message);
@@ -70,7 +95,7 @@ export default function CarritoScreen({ navigation }) {
         <Text style={[typography.body, { textAlign: "center", paddingHorizontal: spacing.lg }]}>
           {error ?? "Genera un menú para ver tu lista de compras."}
         </Text>
-        <TouchableOpacity onPress={cargar} style={styles.botonSecundario}>
+        <TouchableOpacity onPress={() => cargar()} style={styles.botonSecundario}>
           <Text style={styles.botonSecundarioTexto}>Actualizar</Text>
         </TouchableOpacity>
       </View>
@@ -78,6 +103,7 @@ export default function CarritoScreen({ navigation }) {
   }
 
   const excedePresupuesto = lista.presupuesto > 0 && lista.total > lista.presupuesto;
+  const hayPreciosPorActualizar = idsParaActualizar(lista).length > 0;
 
   return (
     <View style={styles.screen}>
@@ -98,6 +124,25 @@ export default function CarritoScreen({ navigation }) {
       {/* ---------- 1. PRODUCTOS ---------- */}
       {paso === 0 && (
         <>
+          <View style={styles.accionesProductos}>
+            {lista.precios_pendientes > 0 && (
+              <Text style={styles.avisoTexto}>Faltan precios para {lista.precios_pendientes} ingredientes.</Text>
+            )}
+            {actualizando && (
+              <View style={styles.actualizando}>
+                <ActivityIndicator color={colors.primary} size="small" />
+                <Text style={typography.bodyMuted}>Consultando precios...</Text>
+              </View>
+            )}
+            {avisoPrecios && <Text style={typography.bodyMuted}>{avisoPrecios}</Text>}
+            {hayPreciosPorActualizar && (
+              <TouchableOpacity onPress={() => cargar({ refrescar: true })}
+                disabled={actualizando}
+                style={[styles.botonSecundario, actualizando && styles.botonDeshabilitado]}>
+                <Text style={styles.botonSecundarioTexto}>Actualizar precios</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <FlatList
             data={lista.items}
             keyExtractor={(item) => item.id}
@@ -211,6 +256,9 @@ const styles = StyleSheet.create({
   fila: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   avisoPresupuesto: { backgroundColor: "#FCEAE6", borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   avisoTexto: { color: colors.warning, fontSize: 13, fontWeight: "600", marginTop: spacing.sm },
+  accionesProductos: { paddingHorizontal: spacing.lg },
+  actualizando: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
+  botonDeshabilitado: { opacity: 0.5 },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },
   boton: { flex: 1, backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: "center" },
   botonTexto: { color: colors.white, fontWeight: "700", fontSize: 15 },

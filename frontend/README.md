@@ -8,6 +8,8 @@ frontend/
 └── src/
     ├── theme/theme.js          # colores, tipografía, espaciados
     ├── services/api.js         # cliente hacia el backend
+    ├── services/ingredientesService.js # regla de los 7 días y fetch de precios
+    ├── services/comprasService.js      # caso de uso: lista + actualización de precios
     ├── components/Card.js      # tarjeta reutilizable
     ├── navigation/RootNavigator.js # sesión, autenticación y pestañas
     └── screens/
