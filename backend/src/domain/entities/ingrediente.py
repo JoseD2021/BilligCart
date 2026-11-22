@@ -23,6 +23,7 @@ class IngredienteFetchInfo:
 class Ingrediente:
     name: str
     last_updated: datetime.datetime
+    last_fetched: datetime.datetime | None
 
     shop: Tienda | None
     price: float | None
@@ -38,4 +39,4 @@ class Ingrediente:
 
     @classmethod
     def default(cls, name: str) -> Ingrediente:
-        return cls(name=name, last_updated=datetime.datetime.now(datetime.UTC), shop=None, price=None, url=None)
+        return cls(name=name, last_updated=datetime.datetime.now(datetime.UTC), last_fetched=None, shop=None, price=None, url=None)

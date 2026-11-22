@@ -26,12 +26,14 @@ class ShoppingUseCase:
         menu = await self.weekly.execute(user_id)
         prefs = await self.preferences.get(user_id)
         items = {}
+        ultimos_fetch = {}
         comidas = 0
         if menu:
             for dia in menu["dias"]:
                 for comida in dia["comidas"].values():
                     comidas += 1
                     for ing in comida["ingredientes"]:
+                        ultimos_fetch[ing["id"]] = ing.get("ultimo_fetch")
                         raw_unit = ing["unidad"].strip().lower()
                         unit, factor = UNITS.get(raw_unit, (raw_unit, 1))
                         key = f"{ing['id']}:{unit}"
@@ -43,21 +45,32 @@ class ShoppingUseCase:
                                                       ing["tienda"], ing["precio"])
         result = sorted(items.values(), key=lambda item: item.id)
         pending = sum(item.precio is None for item in result)
+        menu_completo = bool(result) and comidas == 21
         # Un único precio de referencia por ingrediente, incluso si hay unidades distintas.
         prices = {item.ingrediente_id: item.precio for item in result}
         total = round(sum(price for price in prices.values() if price is not None), 2)
         return ShoppingList(menu["id"] if menu else None, prefs.presupuesto_semanal, total,
-                            result, bool(result) and comidas == 21 and pending == 0, pending)
+                            result, menu_completo and pending == 0, menu_completo, pending,
+                            ultimos_fetch)
 
-    async def confirm(self, user_id: str) -> Pedido:
+    async def confirm(self, user_id: str, omitir_sin_precio: bool = False) -> Pedido:
         shopping = await self.get_list(user_id)
-        if not shopping.puede_confirmar:
-            raise OrderNotReady("Se requiere un menú completo y precios para todos los ingredientes.")
-        snapshot = json.dumps({"menu_id": shopping.menu_id, "items": [asdict(item) for item in shopping.items]},
+        if not shopping.menu_completo:
+            raise OrderNotReady("Se requiere un menú completo para confirmar el pedido.")
+        if shopping.precios_pendientes and not omitir_sin_precio:
+            raise OrderNotReady("Faltan precios para algunos ingredientes. Puedes confirmar sin incluirlos.")
+
+        items = shopping.items
+        if omitir_sin_precio:
+            items = [item for item in items if item.precio is not None]
+        if not items:
+            raise OrderNotReady("No hay ingredientes con precio para confirmar el pedido.")
+        snapshot = json.dumps({"menu_id": shopping.menu_id, "items": [asdict(item) for item in items]},
                               sort_keys=True, ensure_ascii=False)
         key = hashlib.sha256(snapshot.encode()).hexdigest()
+        # shopping.total ya ignora los ingredientes sin precio.
         return await self.orders.create(Pedido(str(uuid4()), user_id, shopping.menu_id, key,
-                                               shopping.items, shopping.total, estado="pendiente"))
+                                               items, shopping.total, estado="pendiente"))
 
     async def current_order(self, user_id: str):
         return await self.orders.get_current(user_id)

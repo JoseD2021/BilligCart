@@ -179,6 +179,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         shopping = ShoppingUseCase(data.projection(), prefs, orders)
         result = await shopping.get_list(USER.id)
         self.assertEqual(result.items[0].cantidad, 2100)
+        self.assertIsNone(result.ultimos_fetch[1])
         self.assertEqual(result.precios_pendientes, 1)
         self.assertFalse(result.puede_confirmar)
         with self.assertRaises(OrderNotReady):
@@ -194,9 +195,44 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         second = await shopping.confirm(USER.id)
         self.assertEqual(order.checkout_key, second.checkout_key)
 
+    async def test_confirm_can_explicitly_exclude_unpriced_ingredients(self):
+        def ingredientes():
+            return [
+                {"id": 1, "nombre": "Arroz", "cantidad": 100, "unidad": "g", "tienda": "Éxito",
+                 "precio": 4000, "ultimo_fetch": None},
+                {"id": 2, "nombre": "Leche", "cantidad": 1, "unidad": "unidad", "tienda": None,
+                 "precio": None, "ultimo_fetch": None},
+            ]
+
+        dias = [{"comidas": {comida: {"ingredientes": ingredientes()}
+                             for comida in ("desayuno", "almuerzo", "cena")}} for _ in range(7)]
+        weekly = SimpleNamespace(execute=AsyncMock(return_value={"id": 1, "dias": dias}))
+        prefs = SimpleNamespace(get=AsyncMock(return_value=Preferencias(USER.id)))
+        orders = SimpleNamespace(create=AsyncMock(side_effect=lambda order: order))
+        shopping = ShoppingUseCase(weekly, prefs, orders)
+
+        lista = await shopping.get_list(USER.id)
+        self.assertTrue(lista.menu_completo)
+        self.assertEqual(lista.precios_pendientes, 1)
+        with self.assertRaises(OrderNotReady):
+            await shopping.confirm(USER.id)
+
+        order = await shopping.confirm(USER.id, omitir_sin_precio=True)
+        self.assertEqual([item.ingrediente_id for item in order.items], [1])
+        self.assertEqual(order.total, 4000)
+        second = await shopping.confirm(USER.id, omitir_sin_precio=True)
+        self.assertEqual(order.checkout_key, second.checkout_key)
+
+        incompleta = ShoppingUseCase(SimpleNamespace(execute=AsyncMock(return_value={
+            "id": 1, "dias": [{"comidas": {"desayuno": {"ingredientes": ingredientes()}}}],
+        })), prefs, orders)
+        with self.assertRaises(OrderNotReady):
+            await incompleta.confirm(USER.id, omitir_sin_precio=True)
+
     async def test_compatible_units_are_combined(self):
         def ingredient(amount, unit):
-            return {"id": 1, "nombre": "Arroz", "cantidad": amount, "unidad": unit, "tienda": None, "precio": 4000}
+            return {"id": 1, "nombre": "Arroz", "cantidad": amount, "unidad": unit, "tienda": None,
+                    "precio": 4000, "ultimo_fetch": "2026-11-01T10:00:00+00:00"}
         weekly = SimpleNamespace(execute=AsyncMock(return_value={"id": 1, "dias": [{"comidas": {
             "desayuno": {"ingredientes": [ingredient(1, "kg")]},
             "almuerzo": {"ingredientes": [ingredient(500, "g")]},
@@ -205,6 +241,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         result = await shopping.get_list(USER.id)
         self.assertEqual(result.items[0].cantidad, 1500)
         self.assertEqual(result.items[0].unidad, "g")
+        self.assertEqual(result.ultimos_fetch[1], "2026-11-01T10:00:00+00:00")
         self.assertFalse(result.puede_confirmar)  # Solo dos comidas: menú incompleto.
 
     async def test_empty_menu_and_missing_order_have_explicit_results(self):

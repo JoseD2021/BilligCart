@@ -57,7 +57,7 @@ class ScraperExito(ScraperBuilder):
         if d.get("nombre") is None or d.get("precio") is None or d.get("url") is None:
             raise ScrapingError("Exito: producto incompleto (posible cambio de estructura en la pagina)", d)
         return Ingrediente(
-            name=d["nombre"], last_updated=datetime.datetime.now(datetime.UTC),
+            name=d["nombre"], last_updated=datetime.datetime.now(datetime.UTC), last_fetched=None,
             price=d["precio"], shop=self.tienda, url=d["url"],
         )
 

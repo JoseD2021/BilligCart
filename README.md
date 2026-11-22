@@ -33,7 +33,7 @@ Esta separación facilita calcular costes o estadísticas para distintos tipos d
 
 ### Builder y Director: extracción de productos de supermercados
 
-El endpoint autenticado `POST /api/v1/ingrediente/fetch/{id}` inicia la búsqueda de productos para un ingrediente. Como actualiza el catálogo compartido, requiere el rol `admin`.
+El endpoint autenticado `POST /api/v1/ingrediente/fetch/{id}` inicia la búsqueda de productos para un ingrediente. Cualquier usuario con sesión puede usarlo: el backend vuelve a validar que el último fetch tenga más de 7 días antes de scrapear. El frontend solo lo llama cuando `GET /compras` reporta una cotización vieja (o nunca hecha) para ese ingrediente.
 
 1. Se define un **Builder (scraper)** para cada supermercado compatible.
 2. Se instancia un **Director** asociado a ese Builder y se llama a `process_list(RAW_JSON)`, donde `RAW_JSON` es la respuesta recibida de la API del supermercado.
@@ -151,19 +151,20 @@ El menú semanal contempla siete días con desayuno, almuerzo y cena: **21 plato
 
 ## Acceso y rutas de la aplicación
 
-Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo, pero crear, editar, borrar o actualizar precios requiere `app_metadata.role = "admin"`, asignado desde un servidor de confianza. No se utiliza `user_metadata` para conceder permisos.
+Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo y actualizar precios con `POST /ingrediente/fetch/{id}`, pero crear, editar o borrar ingredientes requiere `rol = "admin"` en la tabla `public."Roles"` (clave primaria `user_id` = UID de Supabase Auth), asignada desde un servidor de confianza. `GET /auth/me` devuelve ese mismo rol. No se utiliza `user_metadata` ni `app_metadata` para conceder permisos.
 
 | Ruta relativa a `/api/v1` | Uso |
 |---|---|
 | `GET /menu/weekly` | Menú completo del usuario, con platos e ingredientes |
 | `POST /menu/generate` | Generar con preferencias y devolver el resultado persistido |
 | `GET /preferencias`, `PUT /preferencias` | Consultar y guardar las preferencias propias |
-| `GET /compras` | Ingredientes agregados del menú actual |
-| `POST /compras/confirmar` | Registrar un pedido con una copia de la lista; reintentar la misma lista no duplica el pedido |
+| `GET /compras` | Ingredientes agregados del menú actual y `ultimos_fetch` por id de ingrediente |
+| `POST /ingrediente/fetch/{id}` | Buscar ofertas y actualizar el precio de referencia de un ingrediente |
+| `POST /compras/confirmar` | Registrar un pedido con una copia de la lista; `omitir_sin_precio: true` excluye ingredientes sin cotizar; reintentar la misma lista no duplica el pedido |
 | `GET /pedidos/current` | Último pedido propio, o `null` |
 | `GET /pedidos/{id}/estado` | Consultar un pedido propio |
 
-Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. La confirmación requiere el menú completo y precios para todos sus ingredientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra la etapa guardada (`0` confirmado, `1` preparando, `2` en camino, `3` entregado), con repartidor y tiempo estimado solo cuando existen en la base de datos. El servicio de operación o reparto debe actualizar esos campos.
+Compras muestra cantidades agregadas y precios de referencia del catálogo. Los precios existentes no incluyen tamaño de empaque: su suma no representa un cobro calculado por gramos o mililitros. Con `ultimos_fetch`, el frontend solicita una nueva cotización solo para los ingredientes sin fetch o con más de 7 días, tanto en Lista de compras como en Carrito; ante un fallo individual lo reintenta cuando el usuario vuelve a entrar o pulsa "Actualizar precios". La confirmación requiere el menú completo. Si faltan precios, el usuario puede marcar explícitamente `omitir_sin_precio` en Carrito para pagar solo los ingredientes cotizados: el pedido y su total excluyen los pendientes. Registra el pedido; no procesa pagos ni asigna repartidores. Pedido muestra la etapa guardada (`0` confirmado, `1` preparando, `2` en camino, `3` entregado), con repartidor y tiempo estimado solo cuando existen en la base de datos. El servicio de operación o reparto debe actualizar esos campos.
 
 La API registra método, ruta, estado, duración e identificador de solicitud, que también devuelve en `X-Request-ID`. No registra contraseñas, tokens ni cuerpos. Los detalles de errores de persistencia quedan en los logs del servidor.
 

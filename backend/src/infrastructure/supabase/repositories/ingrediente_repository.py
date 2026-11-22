@@ -15,6 +15,7 @@ class SupabaseIngredienteRepository(IngredienteRepository):
         payload = {
             "name": ingr.name,
             "last_updated": ingr.last_updated.strftime("%Y-%m-%d %H:%M:%S.%f%z"),
+            "last_fetched": None,
             "shop": ingr.shop,
             "price": ingr.price,
             "url": ingr.url
@@ -44,6 +45,7 @@ class SupabaseIngredienteRepository(IngredienteRepository):
 
     async def update_fetch_info(self, id: int, fetch_info: IngredienteFetchInfo) -> Ingrediente:
         payload = {
+            "last_fetched": fetch_info.fetched_at.strftime("%Y-%m-%d %H:%M:%S.%f%z"),
             "last_updated": fetch_info.fetched_at.strftime("%Y-%m-%d %H:%M:%S.%f%z"),
             "shop": fetch_info.shop,
             "price": fetch_info.price,

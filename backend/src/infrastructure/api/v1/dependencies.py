@@ -91,7 +91,10 @@ def get_supabase_client(request: Request) -> AsyncClient:
 # ------- Auth / User -------------
 
 def get_auth_service(request: Request) -> AuthService:
-    return SupabaseAuthService(request.app.state.auth_supabase)
+    return SupabaseAuthService(
+        request.app.state.auth_supabase,
+        role_client=request.app.state.supabase,
+    )
 
 async def get_current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(bearer),

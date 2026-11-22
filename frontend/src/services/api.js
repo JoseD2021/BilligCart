@@ -85,7 +85,10 @@ export const api = {
   getMenuSemanal: () => request("/menu/weekly"),
   generarMenuSemanal: () => request("/menu/generate", { method: "POST" }),
   getListaDeCompras: () => request("/compras"),
-  confirmarCompra: () => request("/compras/confirmar", { method: "POST" }),
+  fetchIngrediente: (id) => request(`/ingrediente/fetch/${encodeURIComponent(id)}`, { method: "POST" }),
+  confirmarCompra: (omitirSinPrecio = false) => request("/compras/confirmar", {
+    method: "POST", body: JSON.stringify({ omitir_sin_precio: omitirSinPrecio }),
+  }),
   getPedidoActual: () => request("/pedidos/current"),
   getEstadoPedido: (id) => request(`/pedidos/${encodeURIComponent(id)}/estado`),
   getMe: () => request("/auth/me"),

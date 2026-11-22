@@ -38,6 +38,7 @@ class GetWeeklyMenu:
                 items.append({
                     "id": ingrediente.id, "nombre": ingrediente.name, "cantidad": rel.quantity,
                     "unidad": rel.unit, "precio": ingrediente.price, "tienda": ingrediente.shop,
+                    "ultimo_fetch": ingrediente.last_fetched.isoformat() if ingrediente.last_fetched else None,
                 })
             dias[plato.day - 1]["comidas"][plato.type.value.lower()] = {
                 "id": plato.id, "nombre": plato.name, "descripcion": plato.description, "ingredientes": items,

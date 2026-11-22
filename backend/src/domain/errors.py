@@ -46,6 +46,12 @@ class IngredienteRecentlyUpdated(DomainError):
         super().__init__(f"Ingredient with ID {ingredient_id} was recently updated on {last_updated}")
         self.ingredient_id = ingredient_id
         self.last_updated = last_updated
+        
+class IngredienteRecentlyFetched(DomainError):
+    def __init__(self, ingredient_id: int, last_fetched: datetime.datetime):
+        super().__init__(f"Ingredient with ID {ingredient_id} was recently fetched on {last_fetched}")
+        self.ingredient_id = ingredient_id
+        self.last_fetched = last_fetched
 
 class MenuGenerationError(DomainError):
     pass
