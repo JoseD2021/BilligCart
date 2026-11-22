@@ -26,12 +26,14 @@ class ShoppingUseCase:
         menu = await self.weekly.execute(user_id)
         prefs = await self.preferences.get(user_id)
         items = {}
+        ultimos_fetch = {}
         comidas = 0
         if menu:
             for dia in menu["dias"]:
                 for comida in dia["comidas"].values():
                     comidas += 1
                     for ing in comida["ingredientes"]:
+                        ultimos_fetch[ing["id"]] = ing.get("ultimo_fetch")
                         raw_unit = ing["unidad"].strip().lower()
                         unit, factor = UNITS.get(raw_unit, (raw_unit, 1))
                         key = f"{ing['id']}:{unit}"
@@ -47,7 +49,8 @@ class ShoppingUseCase:
         prices = {item.ingrediente_id: item.precio for item in result}
         total = round(sum(price for price in prices.values() if price is not None), 2)
         return ShoppingList(menu["id"] if menu else None, prefs.presupuesto_semanal, total,
-                            result, bool(result) and comidas == 21 and pending == 0, pending)
+                            result, bool(result) and comidas == 21 and pending == 0, pending,
+                            ultimos_fetch)
 
     async def confirm(self, user_id: str) -> Pedido:
         shopping = await self.get_list(user_id)
