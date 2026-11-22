@@ -15,8 +15,12 @@ from src.domain.errors import (
 
 
 class SupabaseAuthService(AuthService):
-    def __init__(self, client: Any):
+    def __init__(self, client: Any, role_client: Any | None = None):
         self._client = client
+        # Auth (sign_in/sign_up) mutates the SDK client's Authorization header.
+        # Reading Roles must use a separate client that always keeps the
+        # service key, otherwise RLS hides the rows and roles fall back to user.
+        self._role_client = role_client or client
 
     async def sign_up(self, email, password) -> User:
         try:
@@ -50,14 +54,16 @@ class SupabaseAuthService(AuthService):
         log = logging.getLogger(__name__)
         uid = str(user_id)
         try:
-            res = await self._client.table("Roles").select("rol").eq("user_id", uid).limit(1).execute()
+            res = await self._role_client.table("Roles").select("rol").eq("user_id", uid).limit(1).execute()
             raw_role = res.data[0].get("rol") if res.data else None
         except Exception:
             log.exception("No se pudo leer rol desde tabla Roles user_id=%s", uid)
             raw_role = None
-        role = UserRole.from_value(raw_role).value
-        log.info("Rol resuelto user_id=%s role=%s", uid, role)
-        return role
+        role = UserRole.from_value(raw_role)
+        if raw_role and role is UserRole.USER and str(raw_role).strip().lower() != UserRole.USER.value:
+            log.warning("Rol desconocido en Roles user_id=%s rol=%r", uid, raw_role)
+        log.info("Rol resuelto user_id=%s role=%s", uid, role.value)
+        return role.value
 
     async def get_user_from_token(self, token) -> User:
         try:

@@ -83,6 +83,24 @@ class RepositoryTests(unittest.IsolatedAsyncioTestCase):
         user = await SupabaseAuthService(client).get_user_from_token("token")
         self.assertEqual(user.role, "user")
 
+    async def test_admin_role_from_database_is_not_downgraded_to_user(self):
+        client, _ = database({"rol": "admin"})
+        auth_user = SimpleNamespace(id="user", email="user@example.com")
+        client.auth = SimpleNamespace(
+            get_user=AsyncMock(return_value=SimpleNamespace(user=auth_user))
+        )
+        user = await SupabaseAuthService(client).get_user_from_token("token")
+        self.assertEqual(user.role, "admin")
+
+    async def test_role_lookup_uses_trusted_client_after_login_mutates_auth_client(self):
+        auth_user = SimpleNamespace(id="user", email="user@example.com")
+        auth_client = SimpleNamespace(auth=SimpleNamespace(
+            get_user=AsyncMock(return_value=SimpleNamespace(user=auth_user))
+        ))
+        role_client, _ = database({"rol": "admin"})
+        user = await SupabaseAuthService(auth_client, role_client).get_user_from_token("token")
+        self.assertEqual(user.role, "admin")
+
     async def test_duplicate_checkout_does_not_overwrite_order_status(self):
         row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "en_camino"}
         client, query = database(row)

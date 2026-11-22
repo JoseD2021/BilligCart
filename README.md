@@ -151,7 +151,7 @@ El menú semanal contempla siete días con desayuno, almuerzo y cena: **21 plato
 
 ## Acceso y rutas de la aplicación
 
-Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo, pero crear, editar, borrar o actualizar precios requiere `app_metadata.role = "admin"`, asignado desde un servidor de confianza. No se utiliza `user_metadata` para conceder permisos.
+Las rutas de negocio requieren `Authorization: Bearer <access_token>`. Los recursos de menú, plato, relación y pedido se verifican contra el usuario autenticado; nunca se toma el propietario del cuerpo de la solicitud. Los ingredientes son un catálogo compartido: cualquier usuario autenticado puede consultarlo, pero crear, editar, borrar o actualizar precios requiere `rol = "admin"` en la tabla `public."Roles"` (clave primaria `user_id` = UID de Supabase Auth), asignada desde un servidor de confianza. `GET /auth/me` devuelve ese mismo rol. No se utiliza `user_metadata` ni `app_metadata` para conceder permisos.
 
 | Ruta relativa a `/api/v1` | Uso |
 |---|---|
