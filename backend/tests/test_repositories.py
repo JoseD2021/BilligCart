@@ -141,6 +141,25 @@ class RepositoryTests(unittest.IsolatedAsyncioTestCase):
         result = await SupabasePedidoRepository(client).get_by_id("user", "order")
         self.assertEqual(result.estado, "entregado")
 
+    async def test_delivery_address_uses_destination_columns(self):
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000,
+               "estado": "pendiente", "direccion_dest": "Calle 100 # 15-20", "referencias": "Portería",
+               "lat_dest": "4.6860", "lng_dest": -74.05}
+        client, query = database(row)
+        result = await SupabasePedidoRepository(client).set_envio(
+            "user", "order", {"direccion": "Calle 100 # 15-20", "referencia": "Portería", "lat": None, "lng": None})
+        query.update.assert_called_with({"direccion_dest": "Calle 100 # 15-20", "referencias": "Portería",
+                                         "lat_dest": None, "lng_dest": None})
+        query.eq.assert_any_call("user_id", "user")
+        self.assertEqual(result.envio, {"direccion": "Calle 100 # 15-20", "referencia": "Portería",
+                                        "lat": 4.686, "lng": -74.05})
+
+    async def test_order_without_destination_has_no_envio(self):
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000,
+               "estado": "pendiente", "direccion_dest": None}
+        client, _ = database(row)
+        self.assertIsNone((await SupabasePedidoRepository(client).get_by_id("user", "order")).envio)
+
     async def test_order_read_always_filters_owner(self):
         row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "pendiente"}
         client, query = database(row)
