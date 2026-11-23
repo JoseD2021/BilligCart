@@ -44,6 +44,11 @@ async def current_order(user=Depends(get_current_user), use_case=Depends(get_sho
     return await use_case.current_order(user.id)
 
 
+@router.get("/pedidos")
+async def list_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
+    return await use_case.list_orders(user.id)
+
+
 @router.get("/pedidos/{pedido_id}/estado")
 async def order(pedido_id: UUID, user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
     return await use_case.order(user.id, str(pedido_id))

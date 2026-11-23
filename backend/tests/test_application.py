@@ -15,6 +15,7 @@ from src.application.use_cases.persist_generated_menu import (
 from src.application.use_cases.preferences import PreferencesUseCase
 from src.application.use_cases.shopping import ShoppingUseCase
 from src.domain.entities.menu import Menu
+from src.domain.entities.pedido import Pedido
 from src.domain.entities.plato import Plato
 from src.domain.entities.plato_ingrediente import PlatoIngrediente
 from src.domain.entities.preferencias import Preferencias
@@ -251,3 +252,11 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await shopping.get_list(USER.id)).items, [])
         with self.assertRaises(ResourceNotFound):
             await shopping.order(USER.id, "other-order")
+
+    async def test_order_list_uses_the_authenticated_user_scope(self):
+        ordenes = [Pedido("order-1", USER.id, 1, "key-1", [], 1000), Pedido("order-2", USER.id, 1, "key-2", [], 2000)]
+        orders = SimpleNamespace(list_for_user=AsyncMock(return_value=ordenes))
+        shopping = ShoppingUseCase(None, None, orders)
+        result = await shopping.list_orders(USER.id)
+        orders.list_for_user.assert_awaited_once_with(USER.id)
+        self.assertEqual([order.id for order in result], ["order-1", "order-2"])

@@ -46,6 +46,12 @@ class SupabasePedidoRepository(PedidoRepository):
         rows = await self._with_ubicaciones(result.data or [])
         return self._entity(rows[0]) if rows else None
 
+    async def list_for_user(self, user_id: str) -> list[Pedido]:
+        result = await self.client.table("Pedidos").select(SELECT).eq("user_id", user_id).order(
+            "created_at", desc=True).execute()
+        rows = await self._with_ubicaciones(result.data or [])
+        return [self._entity(row) for row in rows]
+
     async def get_by_id(self, user_id: str, pedido_id: str) -> Pedido | None:
         result = await self.client.table("Pedidos").select(SELECT).eq("user_id", user_id).eq("id", str(pedido_id)).execute()
         rows = await self._with_ubicaciones(result.data or [])

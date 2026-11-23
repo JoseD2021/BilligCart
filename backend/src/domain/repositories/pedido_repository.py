@@ -11,6 +11,9 @@ class PedidoRepository(ABC):
     async def get_current(self, user_id: str) -> Pedido | None: ...
 
     @abstractmethod
+    async def list_for_user(self, user_id: str) -> list[Pedido]: ...
+
+    @abstractmethod
     async def get_by_id(self, user_id: str, pedido_id: str) -> Pedido | None: ...
 
     @abstractmethod
