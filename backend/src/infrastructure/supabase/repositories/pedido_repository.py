@@ -18,6 +18,7 @@ class SupabasePedidoRepository(PedidoRepository):
         payload = asdict(pedido)
         payload.pop("created_at")
         payload.pop("ubicacion", None)
+        payload.pop("envio", None)  # se guarda aparte, con set_envio
         await self.client.table("Pedidos").upsert(
             payload, on_conflict="user_id,checkout_key", ignore_duplicates=True,
         ).execute()
@@ -93,6 +94,11 @@ class SupabasePedidoRepository(PedidoRepository):
         rows = await self._with_ubicaciones(result.data or [])
         return self._entity(rows[0]) if rows else None
 
+    async def set_envio(self, user_id: str, pedido_id: str, envio: dict) -> Pedido | None:
+        await self.client.table("Pedidos").update({"envio": envio}).eq("id", str(pedido_id)).eq(
+            "user_id", user_id).execute()
+        return await self.get_by_id(user_id, pedido_id)
+
     async def update_estado(self, pedido_id: str, repartidor_id: str, estado: str) -> Pedido | None:
         await self.client.table("Pedidos").update({"estado": estado}).eq("id", str(pedido_id)).eq(
             "repartidor_id", repartidor_id).execute()
@@ -125,4 +131,5 @@ class SupabasePedidoRepository(PedidoRepository):
             repartidor_id=str(row["repartidor_id"]) if row.get("repartidor_id") else None,
             repartidor=row.get("repartidor"),
             created_at=timestamp(row.get("created_at")), ubicacion=ubicacion_data,
+            envio=row.get("envio"),
         )
