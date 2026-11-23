@@ -1,9 +1,11 @@
+import json
 import logging
 import os
 
 import aio_pika
 from aio_pika import DeliveryMode, ExchangeType, Message
 
+from src.domain.errors import DomainError
 from src.events.application.event_publisher import EventPublisher
 from src.events.application.event_registry import EventRegistry
 from src.events.contracts.base_event import BaseEvent
@@ -59,7 +61,7 @@ class RabbitMQEventBus(EventPublisher):
             heartbeat=60,
         )
 
-        self._channel = await self._connection.channel()
+        self._channel = await self._connection.channel(publisher_confirms=True, on_return_raises=True)
         await self._channel.set_qos(prefetch_count=1)
 
         self._exchange = await self._channel.declare_exchange(
@@ -94,11 +96,11 @@ class RabbitMQEventBus(EventPublisher):
             routing_key=envelope.event_type,
         )
 
-    async def consume(
+    async def prepare_consumer(
         self,
         registry: EventRegistry,
         queue_name: str | None = None,
-    ) -> None:
+    ):
         await self.connect()
 
         if not registry.event_types:
@@ -140,26 +142,61 @@ class RabbitMQEventBus(EventPublisher):
                 routing_key=event_type,
             )
 
+        for seconds in (5, 30, 300):
+            await self._channel.declare_queue(f"{queue_name}.retry.{seconds}", durable=True, arguments={
+                "x-queue-type": "quorum", "x-dead-letter-strategy": "at-least-once",
+                "x-overflow": "reject-publish", "x-message-ttl": seconds * 1000,
+                "x-dead-letter-exchange": "", "x-dead-letter-routing-key": queue_name,
+            })
+
         logger.info(
             "Consumiendo eventos desde la cola %s",
             queue_name,
         )
+        return queue
+
+    async def _forward(self, message, destination, retry_count=0):
+        await self._channel.default_exchange.publish(Message(
+            body=message.body, content_type="application/json", delivery_mode=DeliveryMode.PERSISTENT,
+            message_id=message.message_id, headers={"retry_count": retry_count},
+        ), routing_key=destination, mandatory=True)
+
+    async def handle_message(self, message, registry, queue_name):
+        try:
+            envelope = EventEnvelope.from_json(message.body)
+            logger.info("event_received event_type=%s event_id=%s queue=%s",
+                        envelope.event_type, envelope.event_id, queue_name)
+            await registry.dispatch(envelope)
+        except (json.JSONDecodeError, ValueError, TypeError, KeyError, LookupError, DomainError):
+            try:
+                await self._forward(message, f"{queue_name}.dead")
+            except Exception:
+                await message.nack(requeue=True)
+                return
+            await message.ack()
+            logger.exception("event_rejected event_id=%s destination=%s.dead", message.message_id, queue_name)
+        except Exception:
+            count = int((message.headers or {}).get("retry_count", 0))
+            delay = (5, 30, 300)[min(count, 2)]
+            try:
+                await self._forward(message, f"{queue_name}.retry.{delay}", count + 1)
+            except Exception:
+                await message.nack(requeue=True)
+                return
+            await message.ack()
+            logger.warning("event_retry_scheduled event_id=%s delay=%s queue=%s",
+                           message.message_id, delay, queue_name)
+        else:
+            await message.ack()
+            logger.info("event_processed event_type=%s event_id=%s queue=%s",
+                        envelope.event_type, envelope.event_id, queue_name)
+
+    async def consume(self, registry: EventRegistry, queue_name: str | None = None) -> None:
+        queue = await self.prepare_consumer(registry, queue_name)
 
         async with queue.iterator() as iterator:
             async for message in iterator:
-                try:
-                    async with message.process(requeue=False):
-                        envelope = EventEnvelope.from_json(
-                            message.body
-                        )
-                        await registry.dispatch(envelope)
-
-                except Exception:
-                    logger.exception(
-                        "No se pudo procesar el evento %s. "
-                        "RabbitMQ lo rechazará y lo enviará a la DLQ.",
-                        message.message_id,
-                    )
+                await self.handle_message(message, registry, queue.name)
 
     async def close(self) -> None:
         if self._connection and not self._connection.is_closed:

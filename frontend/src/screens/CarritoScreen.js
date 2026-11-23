@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
 } from "react-native";
@@ -9,12 +9,14 @@ import SelectorUbicacion from "../components/SelectorUbicacion";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { getListaCompras, confirmarCompra } from "../services/comprasService";
 import { idsParaActualizar } from "../services/ingredientesService";
+import { api } from "../services/api";
 
 const PASOS = ["Productos", "Total", "Pago", "Envío"];
 const pesos = (n) => `$${Number(n).toLocaleString("es-CO")}`;
 
-export default function CarritoScreen({ navigation }) {
-  const [paso, setPaso] = useState(0);
+export default function CarritoScreen({ navigation, route }) {
+  const returnOrderId = route?.params?.paymentOrderId;
+  const [paso, setPaso] = useState(returnOrderId ? 2 : 0);
   const [lista, setLista] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -61,6 +63,18 @@ export default function CarritoScreen({ navigation }) {
   }, []);
   useFocusEffect(cargar);
 
+  // Stripe reloads the web app. Recover the owned order instead of creating it again.
+  useEffect(() => {
+    if (!returnOrderId) return;
+    let active = true;
+    setPaso(2);
+    setPedido(null);
+    api.getEstadoPedido(returnOrderId)
+      .then((value) => { if (active) setPedido(value); })
+      .catch((e) => { if (active) { setError(e.message); setPaso(0); } });
+    return () => { active = false; };
+  }, [returnOrderId]);
+
   async function confirmar() {
     if (confirmando) return;
     setConfirmando(true);
@@ -84,14 +98,15 @@ export default function CarritoScreen({ navigation }) {
     setPaso(0);
     setPedido(null);
     setEnvio({ direccion: "", referencia: "", lat: null, lng: null });
+    navigation.setParams({ paymentOrderId: undefined });
     navigation.navigate("Pedido", { pedidoId });
   }
 
-  if (cargando && !lista) {
+  if ((cargando && !lista && paso < 2) || (paso === 2 && !pedido)) {
     return <View style={styles.centrado}><ActivityIndicator color={colors.primary} size="large" /></View>;
   }
 
-  if (error || !lista?.items?.length) {
+  if ((error || !lista?.items?.length) && paso < 2) {
     return (
       <View style={styles.centrado}>
         <Text style={[typography.body, { textAlign: "center", paddingHorizontal: spacing.lg }]}>
@@ -104,11 +119,11 @@ export default function CarritoScreen({ navigation }) {
     );
   }
 
-  const excedePresupuesto = lista.presupuesto > 0 && lista.total > lista.presupuesto;
-  const hayPreciosPorActualizar = idsParaActualizar(lista).length > 0;
-  const itemsSinPrecio = lista.items.filter((item) => item.precio == null);
-  const puedeConfirmar = lista.puede_confirmar
-    || (lista.menu_completo && omitirSinPrecio && itemsSinPrecio.length > 0
+  const excedePresupuesto = (lista?.presupuesto ?? 0) > 0 && lista.total > lista.presupuesto;
+  const hayPreciosPorActualizar = lista ? idsParaActualizar(lista).length > 0 : false;
+  const itemsSinPrecio = (lista?.items ?? []).filter((item) => item.precio == null);
+  const puedeConfirmar = lista?.puede_confirmar
+    || (lista?.menu_completo && omitirSinPrecio && itemsSinPrecio.length > 0
         && itemsSinPrecio.length < lista.items.length);
 
   return (

@@ -1,7 +1,10 @@
 import hashlib
 import hmac
 import json
+import logging
+import re
 import time
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -11,6 +14,8 @@ from src.domain.entities.payment import (
     PaymentUnavailable,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class StripeGateway:
     def __init__(self, secret_key, success_url, cancel_url, client=None):
@@ -18,12 +23,22 @@ class StripeGateway:
         self.success_url, self.cancel_url = success_url, cancel_url
         self.client = client
 
+    @staticmethod
+    def _return_url(value, order_id, result):
+        parts = urlsplit(value)
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        query.update({"payment_order_id": order_id, "stripe_return": result})
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
     async def create_checkout(self, payment):
         if not self.secret_key or not self.success_url or not self.cancel_url:
             raise PaymentUnavailable("Stripe configuration is missing")
+        if not self.secret_key.startswith("sk_test_"):
+            raise PaymentRejected("Only Stripe TEST is enabled for reference order totals")
         data = {
-            "mode": "payment", "payment_method_types[0]": "card",
-            "success_url": self.success_url, "cancel_url": self.cancel_url,
+            "mode": "payment",
+            "success_url": self._return_url(self.success_url, payment.order_id, "success"),
+            "cancel_url": self._return_url(self.cancel_url, payment.order_id, "cancel"),
             "client_reference_id": payment.id, "metadata[payment_id]": payment.id,
             "line_items[0][quantity]": "1",
             "line_items[0][price_data][currency]": payment.currency,
@@ -32,16 +47,34 @@ class StripeGateway:
         }
         try:
             if self.client:
-                response = await self._send(self.client, payment.id, data)
+                response = await self._send(self.client, payment.provider_idempotency_key or payment.id, data)
             else:
                 async with httpx.AsyncClient(timeout=15) as client:
-                    response = await self._send(client, payment.id, data)
+                    response = await self._send(client, payment.provider_idempotency_key or payment.id, data)
         except httpx.TransportError as exc:
             raise PaymentUnavailable("Stripe transport unavailable") from exc
         if response.status_code in (408, 409, 429) or response.status_code >= 500:
             raise PaymentUnavailable("Stripe temporarily unavailable")
         if not response.is_success:
-            raise PaymentRejected("Stripe rejected checkout creation")
+            # Record diagnostic identifiers, never credentials or the full provider payload.
+            try:
+                error = response.json().get("error", {})
+            except (ValueError, AttributeError):
+                error = {}
+            if not isinstance(error, dict):
+                error = {}
+            def identifier(value):
+                text = str(value or "")
+                return text if re.fullmatch(r"[A-Za-z0-9_.\[\]-]{1,150}", text) else "unknown"
+            code = identifier(error.get("code") or error.get("type"))
+            parameter = identifier(error.get("param"))
+            request_id = identifier(response.headers.get("request-id"))
+            logger.warning("stripe_checkout_rejected status=%s code=%s parameter=%s request_id=%s",
+                           response.status_code, code, parameter, request_id)
+            raise PaymentRejected(
+                f"Stripe rechazo la solicitud (HTTP {response.status_code}, {code}, "
+                f"parametro: {parameter}). Referencia: {request_id}."
+            )
         try:
             result = response.json()
             if not result["id"].startswith("cs_") or not result["url"].startswith("https://checkout.stripe.com/"):
@@ -59,6 +92,8 @@ class StripeGateway:
     async def get_checkout(self, session_id):
         if not self.secret_key:
             raise PaymentUnavailable("Stripe configuration missing")
+        if not self.secret_key.startswith("sk_test_"):
+            raise PaymentUnavailable("Only Stripe TEST is enabled")
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 response = await client.get("https://api.stripe.com/v1/checkout/sessions/" + session_id,

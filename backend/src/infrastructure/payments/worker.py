@@ -13,6 +13,7 @@ from src.events.contracts.event_envelope import EventEnvelope
 from src.events.contracts.payment_events import PaymentRequested, PaymentSucceeded
 from src.infrastructure.payments.config import payment_store
 from src.infrastructure.payments.stripe_gateway import StripeGateway
+from src.infrastructure.payments.supabase_projection import SupabasePaymentProjection
 
 logger = logging.getLogger(__name__)
 REQUESTS = "payments.requests"
@@ -20,19 +21,23 @@ SUCCESSES = "payments.projection"
 
 
 class LocalPaymentProjection:
-    """Working technical projection; final Supabase adapter uses the same contract."""
+    """Isolated-test adapter; production successes are handled by event_worker."""
+    target = "sqlite.paid_orders"
     def __init__(self, store):
         self.store = store
 
     async def apply(self, event):
-        self.store.apply_projection(event)
+        inserted = self.store.apply_projection(event)
+        logger.info("payment_projection_%s target=sqlite.paid_orders event_id=%s payment_id=%s order_id=%s",
+                    "applied" if inserted else "duplicate", event["event_id"], event["payment_id"], event["order_id"])
 
 
 class PaymentWorker:
-    def __init__(self, store, gateway, projection=None):
+    def __init__(self, store, gateway, projection=None, *, process_successes=True):
         self.store = store
         self.processor = ProcessPayment(store, gateway)
         self.projection = projection or LocalPaymentProjection(store)
+        self.process_successes = process_successes
 
     async def connect(self):
         self.connection = await aio_pika.connect_robust(
@@ -45,10 +50,15 @@ class PaymentWorker:
         self.exchange = await self.channel.declare_exchange(
             os.getenv("RABBITMQ_EVENT_EXCHANGE", "domain_events"), aio_pika.ExchangeType.TOPIC, durable=True)
         self.queues = {}
+        # Keep declaring the old success queue while migrating, so no durable message is discarded.
         for name, event_type in ((REQUESTS, PaymentRequested.EVENT_TYPE), (SUCCESSES, PaymentSucceeded.EVENT_TYPE)):
             queue = await self.channel.declare_queue(name, durable=True, arguments={"x-queue-type": "quorum"})
-            await queue.bind(self.exchange, routing_key=event_type)
-            self.queues[name] = queue
+            if name == REQUESTS or self.process_successes:
+                await queue.bind(self.exchange, routing_key=event_type)
+            else:
+                await queue.unbind(self.exchange, routing_key=event_type)
+            if name == REQUESTS or self.process_successes:
+                self.queues[name] = queue
             await self.channel.declare_queue(name + ".dead", durable=True, arguments={"x-queue-type": "quorum"})
             for seconds in (5, 30, 300):
                 await self.channel.declare_queue(f"{name}.retry.{seconds}", durable=True, arguments={
@@ -57,6 +67,8 @@ class PaymentWorker:
                     "x-message-ttl": seconds * 1000, "x-dead-letter-exchange": "",
                     "x-dead-letter-routing-key": name,
                 })
+        logger.info("payment_worker_connected request_queue=%s success_consumer=%s",
+                    REQUESTS, "local-test-consumer" if self.process_successes else "event_worker")
 
     async def publish_outbox_once(self):
         for row in self.store.pending_events():
@@ -67,17 +79,26 @@ class PaymentWorker:
             ), routing_key=envelope.event_type, mandatory=True)
             # Crash between publish and marking sent => duplicate, never lost message.
             self.store.mark_sent(row["event_id"])
+            logger.info("payment_event_published event_type=%s event_id=%s payment_id=%s",
+                        envelope.event_type, envelope.event_id, envelope.payload.get("payment_id"))
 
     async def dispatch(self, body, name):
         envelope = EventEnvelope.from_json(body)
+        logger.info("payment_event_received queue=%s event_type=%s event_id=%s payment_id=%s",
+                    name, envelope.event_type, envelope.event_id, envelope.payload.get("payment_id"))
         if name == REQUESTS and envelope.event_type == PaymentRequested.EVENT_TYPE:
             event = PaymentRequested.from_payload(envelope.payload, event_id=envelope.event_id,
                                                    occurred_at=envelope.occurred_at)
             await self.processor.execute(event.payment_id)
-        elif name == SUCCESSES and envelope.event_type == PaymentSucceeded.EVENT_TYPE:
+            payment = self.store.get(event.payment_id)
+            logger.info("payment_request_processed event_id=%s payment_id=%s status=%s",
+                        event.event_id, event.payment_id, payment.status.value if payment else "not_found")
+        elif self.process_successes and name == SUCCESSES and envelope.event_type == PaymentSucceeded.EVENT_TYPE:
             event = PaymentSucceeded.from_payload(envelope.payload, event_id=envelope.event_id,
                                                    occurred_at=envelope.occurred_at)
             await self.projection.apply(asdict(event) | {"occurred_at": event.occurred_at.isoformat()})
+            logger.info("payment_success_consumed event_id=%s payment_id=%s order_id=%s",
+                        event.event_id, event.payment_id, event.order_id)
         else:
             raise ValueError("Unexpected payment event")
 
@@ -143,11 +164,15 @@ async def main():
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
     key = os.getenv("STRIPE_SECRET_KEY", "")
-    if os.getenv("PAYMENTS_SANDBOX_FIXTURES", "false").lower() == "true" and not key.startswith("sk_test_"):
-        raise RuntimeError("Sandbox fixtures require a Stripe test key")
-    await PaymentWorker(payment_store(), StripeGateway(
+    if key and not key.startswith("sk_test_"):
+        raise RuntimeError("Payments are enabled only with a Stripe sk_test_ key")
+    store = payment_store()
+    target = SupabasePaymentProjection.target
+    pending = store.requeue_unprojected_successes(target)
+    logger.info("payment_projection_backfill_queued target=%s count=%s consumer=event_worker", target, pending)
+    await PaymentWorker(store, StripeGateway(
         key, os.getenv("STRIPE_SUCCESS_URL"), os.getenv("STRIPE_CANCEL_URL"),
-    )).run()
+    ), process_successes=False).run()
 
 
 if __name__ == "__main__":

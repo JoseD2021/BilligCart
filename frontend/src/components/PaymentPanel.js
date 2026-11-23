@@ -9,29 +9,43 @@ export default function PaymentPanel({ orderId, onSucceeded }) {
   const [payment, setPayment] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [configuration, setConfiguration] = useState(null);
   const requestKey = useRef(null);
   const alive = useRef(false);
+  const inFlight = useRef(false);
+  const notifiedPayment = useRef(null);
 
   useFocusEffect(useCallback(() => {
     alive.current = true;
     let active = true;
-    const refresh = () => api.getPagoActual(orderId)
-      .then((value) => { if (active) setPayment(value); })
+    const refresh = () => Promise.all([api.getPagoActual(orderId), api.getConfiguracionPagos()])
+      .then(([value, config]) => {
+        if (active) { setPayment(value); setConfiguration(config); }
+      })
       .catch((e) => { if (active) setError(e.message); });
     refresh();
     const timer = setInterval(refresh, 5000);
     return () => { active = false; alive.current = false; clearInterval(timer); };
   }, [orderId]));
 
-  useEffect(() => { requestKey.current = null; setPayment(null); setError(null); }, [orderId]);
+  useEffect(() => {
+    requestKey.current = null;
+    setPayment(null);
+    setConfiguration(null);
+    setError(null);
+  }, [orderId]);
 
   // Aviso opcional al carrito: cuando Stripe confirma el pago (vía webhook) pasa al siguiente paso.
   useEffect(() => {
-    if (payment?.status === "succeeded") onSucceeded?.();
-  }, [payment?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (payment?.status === "succeeded" && notifiedPayment.current !== payment.id) {
+      notifiedPayment.current = payment.id;
+      onSucceeded?.();
+    }
+  }, [payment?.id, payment?.status, onSucceeded]);
 
   async function requestPayment() {
-    if (busy) return;
+    if (inFlight.current || !configuration?.ready) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     // Same key on uncertain network results. Server also prevents parallel attempts per order.
@@ -42,6 +56,7 @@ export default function PaymentPanel({ orderId, onSucceeded }) {
     } catch (e) {
       if (alive.current) setError(e.message);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
@@ -54,11 +69,25 @@ export default function PaymentPanel({ orderId, onSucceeded }) {
   return (
     <View style={{ marginTop: spacing.lg }}>
       <Text style={typography.h2}>Pago</Text>
+      <Text style={typography.bodyMuted}>Stripe TEST: esta operación no mueve dinero real.</Text>
+      {!!configuration && (
+        <Text style={typography.bodyMuted}>
+          Se usará el total guardado del pedido en {configuration.currency?.toUpperCase()}, exclusivamente para una prueba.
+          Los precios del carrito siguen siendo de referencia.
+        </Text>
+      )}
+      {configuration?.issues?.map((issue) => <Text key={issue} style={{ color: colors.warning }}>{issue}</Text>)}
       {!!payment && <Text style={typography.body}>{payment.message}</Text>}
+      {!!payment?.error && <Text style={{ color: colors.warning }}>{payment.error}</Text>}
+      {!!payment && <Text style={typography.bodyMuted}>
+        Importe del intento: {(payment.amount_minor / 100).toLocaleString("es-CO", {
+          style: "currency", currency: payment.currency.toUpperCase(),
+        })}
+      </Text>}
       {!!error && <Text style={{ color: colors.warning }}>{error}</Text>}
       {(!payment || ["failed", "expired"].includes(payment.status)) && (
-        <TouchableOpacity disabled={busy} onPress={payment ? retry : requestPayment}>
-          <Text style={{ color: colors.primary, paddingVertical: spacing.md }}>
+        <TouchableOpacity disabled={busy || !configuration?.ready} onPress={payment ? retry : requestPayment}>
+          <Text style={{ color: colors.primary, paddingVertical: spacing.md, opacity: configuration?.ready ? 1 : 0.5 }}>
             {busy ? "Guardando solicitud..." : payment ? "Reintentar pago" : "Solicitar pago con Stripe"}
           </Text>
         </TouchableOpacity>
