@@ -104,6 +104,7 @@ export const api = {
   confirmarCompra: (omitirSinPrecio = false) => request("/compras/confirmar", {
     method: "POST", body: JSON.stringify({ omitir_sin_precio: omitirSinPrecio }),
   }),
+  getPedidos: () => request("/pedidos"),
   getPedidoActual: () => request("/pedidos/current"),
   getEstadoPedido: (id) => request(`/pedidos/${encodeURIComponent(id)}/estado`),
   getMe: () => request("/auth/me"),

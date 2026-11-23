@@ -99,7 +99,7 @@ export default function CarritoScreen({ navigation, route }) {
     setPedido(null);
     setEnvio({ direccion: "", referencia: "", lat: null, lng: null });
     navigation.setParams({ paymentOrderId: undefined });
-    navigation.navigate("Pedido", { pedidoId });
+    navigation.navigate("Pedido", { screen: "Pedidos", params: { pedidoId } });
   }
 
   if ((cargando && !lista && paso < 2) || (paso === 2 && !pedido)) {
