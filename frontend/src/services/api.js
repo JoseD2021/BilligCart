@@ -72,10 +72,20 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-export const WS_BASE_URL =
-  Platform.OS === "web"
-    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`
-    : (process.env.EXPO_PUBLIC_WS_URL ?? (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost").replace(/^http/, "ws").replace(/\/api\/v1\/?$/, "").replace(/\/v1\/?$/, ""));
+function normalizeWsUrl(value) {
+  return value
+    .replace(/^http:/, "ws:")
+    .replace(/^https:/, "wss:")
+    .replace(/\/api\/v1\/?$/, "")
+    .replace(/\/v1\/?$/, "")
+    .replace(/\/$/, "");
+}
+
+export const WS_BASE_URL = process.env.EXPO_PUBLIC_WS_URL
+  ? normalizeWsUrl(process.env.EXPO_PUBLIC_WS_URL)
+  : Platform.OS === "web"
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.hostname}`
+    : normalizeWsUrl(process.env.EXPO_PUBLIC_API_URL ?? "http://localhost");
 
 export const api = {
   register: (data) => request("/auth/register", { method: "POST", body: JSON.stringify(data) }),

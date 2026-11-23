@@ -60,8 +60,8 @@ Los contratos, la publicación, el registro de handlers y la integración con Ra
 
 | Servicio | Dirección | Uso |
 |---|---|---|
-| Frontend | `http://localhost:8081` | Interfaz de usuario |
-| Backend | `http://localhost:8000` | API REST |
+| Frontend | `http://localhost:8081` | Interfaz de usuario expo (pc local)|
+| Backend | `http://localhost` | API REST |
 | Swagger | `http://localhost/docs` | Documentación interactiva a través de Traefik |
 | RabbitMQ AMQP | `localhost:5672` | Comunicación entre servicios |
 | Panel de RabbitMQ | `http://localhost:15672` *(solo si está habilitado el plugin y publicado el puerto)* | Administración y monitoreo |
@@ -143,9 +143,13 @@ En una segunda terminal, entra en la carpeta `frontend`, instala las dependencia
 cd frontend
 npm install
 npx expo start
+# para usar por expo go (sdk 51):
+npx expo start --tunnel --clear
 ```
 
 `npm install` descarga las dependencias declaradas por el proyecto. `npx expo start` inicia el servidor de desarrollo y muestra un código QR o las opciones para abrir la aplicación en un emulador compatible. Para abrirla en un teléfono, el dispositivo y el ordenador normalmente deben estar en la misma red Wi-Fi.
+
+En la demo web, el HTTP usa el proxy de Metro en `/api/v1` y los WebSocket van directo a Traefik en el puerto 80 (`ws://<host>/ws/...`). En móvil se usa `EXPO_PUBLIC_WS_URL` o, si no está definida, se deriva de `EXPO_PUBLIC_API_URL`.
 
 ## Generación y persistencia del menú
 

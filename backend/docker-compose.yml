@@ -228,7 +228,7 @@ services:
       - "traefik.http.routers.gps.rule=PathPrefix(`/ws`)"
       - "traefik.http.routers.gps.entrypoints=web"
       - "traefik.http.services.gps.loadbalancer.server.port=8001"
-      - "traefik.docker.network=proxy_network"
+      - "traefik.docker.network=internal_network"
     depends_on:
       rabbitmq:
         condition: service_healthy

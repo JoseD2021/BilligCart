@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as Location from "expo-location";
 import { api, WS_BASE_URL, getAuthToken } from "../services/api";
 import { colors, radius, spacing, typography } from "../theme/theme";
 
@@ -13,22 +14,28 @@ export default function RepartidorScreen() {
   const [modo, setModo] = useState("idle");
   const wsRef = useRef(null);
   const watchRef = useRef(null);
+  const nativeWatchRef = useRef(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
       const [d, a] = await Promise.all([api.getPedidosDisponibles(), api.getPedidosAsignados()]);
       setDisponibles(d); setAsignados(a);
-      if (!activo && a.length) setActivo(a[0].id);
+      setActivo((actual) => {
+        if (actual && a.some((pedido) => pedido.id === actual)) return actual;
+        return a.length ? a[a.length - 1].id : null;
+      });
     } catch (e) { Alert.alert("Error", e.message); }
     finally { setCargando(false); }
-  }, [activo]);
+  }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
 
   useEffect(() => () => {
     wsRef.current?.close();
     if (watchRef.current != null && navigator?.geolocation) navigator.geolocation.clearWatch(watchRef.current);
+    nativeWatchRef.current?.remove?.();
+    nativeWatchRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -38,6 +45,7 @@ export default function RepartidorScreen() {
     wsRef.current = ws;
     let intervalMs = 10000;
     let timer = null;
+    let vivo = true;
 
     const sendLocation = (pos) => {
       const c = pos?.coords;
@@ -45,14 +53,30 @@ export default function RepartidorScreen() {
       ws.send(JSON.stringify({ type: "location", lat: c.latitude, lng: c.longitude, accuracy: c.accuracy, heading: c.heading, speed: c.speed }));
     };
 
-    const startGeo = () => {
+    const startGeo = async () => {
+      const onGeoError = () => {};
       if (timer) clearInterval(timer);
-      if (Platform.OS === "web" && navigator?.geolocation) {
+      if (Platform.OS === "web") {
+        if (!navigator?.geolocation) { onGeoError({ code: 0, message: "Geolocation no disponible" }); return; }
         if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
-        watchRef.current = navigator.geolocation.watchPosition(sendLocation, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
-        timer = setInterval(() => navigator.geolocation.getCurrentPosition(sendLocation, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }), intervalMs);
-      } else {
-        Alert.alert("Ubicación", "La demo de GPS está optimizada para web; en móvil requiere configuración de permisos de ubicación.");
+        watchRef.current = navigator.geolocation.watchPosition(sendLocation, onGeoError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+        timer = setInterval(() => navigator.geolocation.getCurrentPosition(sendLocation, onGeoError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }), intervalMs);
+        return;
+      }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (!vivo) return;
+        if (status !== "granted") {
+          Alert.alert("Ubicación", "Activa el permiso de ubicación para Expo Go y vuelve a entrar.");
+          return;
+        }
+        if (nativeWatchRef.current) nativeWatchRef.current.remove();
+        nativeWatchRef.current = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, timeInterval: intervalMs, distanceInterval: 1 },
+          sendLocation
+        );
+      } catch {
+        Alert.alert("Ubicación", "No se pudo iniciar el GPS del dispositivo.");
       }
     };
 
@@ -70,8 +94,11 @@ export default function RepartidorScreen() {
     };
     ws.onerror = () => {};
     return () => {
+      vivo = false;
       if (timer) clearInterval(timer);
       if (watchRef.current != null && navigator?.geolocation) navigator.geolocation.clearWatch(watchRef.current);
+      nativeWatchRef.current?.remove?.();
+      nativeWatchRef.current = null;
       ws.close();
       if (wsRef.current === ws) wsRef.current = null;
     };
@@ -99,7 +126,6 @@ export default function RepartidorScreen() {
               <Text style={styles.smallBtnText}>{e}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.smallBtn} onPress={() => setActivo(item.id)}><Text style={styles.smallBtnText}>{activo === item.id ? `GPS ${modo}` : "Activar GPS"}</Text></TouchableOpacity>
         </View>
       )}
     </View>
@@ -108,7 +134,7 @@ export default function RepartidorScreen() {
   return (
     <View style={styles.screen}>
       <Text style={typography.h1}>Modo repartidor</Text>
-      <Text style={[typography.bodyMuted, { marginBottom: spacing.sm }]}>Pedido activo GPS: {activo ? String(activo).slice(0, 8) : "ninguno"} · modo {modo}</Text>
+      <Text style={[typography.bodyMuted, { marginBottom: spacing.sm }]}>GPS automático: {activo ? String(activo).slice(0, 8) : "ninguno"} · modo {modo}</Text>
       <Text style={typography.h2}>Disponibles</Text>
       <FlatList data={disponibles} keyExtractor={(i) => String(i.id)} renderItem={({ item }) => <Pedido item={item} />} ListEmptyComponent={<Text style={typography.bodyMuted}>No hay pedidos pendientes.</Text>} />
       <Text style={[typography.h2, { marginTop: spacing.md }]}>Mis pedidos</Text>

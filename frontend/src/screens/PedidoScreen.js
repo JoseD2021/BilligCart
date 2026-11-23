@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Card from "../components/Card";
 import PaymentPanel from "../components/PaymentPanel";
+import TrackingMap from "../components/TrackingMap";
 import { colors, radius, spacing, typography } from "../theme/theme";
 import { api, WS_BASE_URL, getAuthToken } from "../services/api";
 
@@ -12,48 +13,6 @@ const ESTADOS = [
   { clave: "en_camino", etiqueta: "En camino" },
   { clave: "entregado", etiqueta: "Entregado" },
 ];
-
-function TrackingMap({ location, courierOnline }) {
-  const ref = useRef(null);
-  const mapRef = useRef(null);
-  const markerRef = useRef(null);
-  useEffect(() => {
-    if (Platform.OS !== "web" || !ref.current) return;
-    let cancelled = false;
-    async function ensure() {
-      if (!window.L) {
-        await new Promise((resolve, reject) => {
-          const css = document.createElement("link");
-          css.rel = "stylesheet"; css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(css);
-          const s = document.createElement("script");
-          s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; s.onload = resolve; s.onerror = reject; document.body.appendChild(s);
-        });
-      }
-      if (cancelled || !ref.current) return;
-      if (!mapRef.current) {
-        mapRef.current = window.L.map(ref.current).setView([4.711, -74.0721], 13);
-        window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap" }).addTo(mapRef.current);
-      }
-      if (location) {
-        const pos = [location.lat, location.lng];
-        if (!markerRef.current) markerRef.current = window.L.marker(pos).addTo(mapRef.current);
-        else markerRef.current.setLatLng(pos);
-        mapRef.current.setView(pos, mapRef.current.getZoom() || 15);
-      }
-    }
-    ensure().catch(() => {});
-    return () => { cancelled = true; };
-  }, [location]);
-  if (Platform.OS !== "web") {
-    return <View style={styles.mapFallback}><Text style={typography.body}>Mapa disponible en demo web. Última ubicación: {location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : "sin datos"}.</Text></View>;
-  }
-  return (
-    <View style={styles.mapWrap}>
-      <div ref={ref} style={{ height: 260, width: "100%", borderRadius: 12 }} />
-      <Text style={[typography.bodyMuted, { marginTop: spacing.xs }]}>{courierOnline ? "Repartidor conectado" : "Repartidor no conectado"}{location ? ` · ${new Date(location.ts * 1000).toLocaleTimeString()}` : ""}</Text>
-    </View>
-  );
-}
 
 export default function PedidoScreen({ route }) {
   const pedidoId = route.params?.pedidoId;
@@ -104,7 +63,7 @@ export default function PedidoScreen({ route }) {
   );
 
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={typography.h1}>Tu pedido</Text>
       <Text style={[typography.bodyMuted, { marginBottom: spacing.md }]}>
         {pedido.repartidor ? `Repartidor: ${pedido.repartidor}` : "Repartidor pendiente de asignación"}
@@ -128,12 +87,13 @@ export default function PedidoScreen({ route }) {
       <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
       <PaymentPanel orderId={pedido.id} />
       <TouchableOpacity onPress={cargar}><Text style={styles.textoActivo}>Actualizar estado</Text></TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background, padding: spacing.lg },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl },
   centrado: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background, padding: spacing.lg },
   paso: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm },
   punto: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.border, marginRight: spacing.md },
@@ -141,6 +101,4 @@ const styles = StyleSheet.create({
   textoActivo: { fontWeight: "700", color: colors.primary },
   btn: { backgroundColor: colors.primary, padding: spacing.sm, borderRadius: radius.md, alignItems: "center", marginVertical: spacing.sm },
   btnText: { color: "#fff", fontWeight: "700" },
-  mapWrap: { marginVertical: spacing.sm },
-  mapFallback: { backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, marginVertical: spacing.sm },
 });
