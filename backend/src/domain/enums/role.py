@@ -9,7 +9,7 @@ class UserRole(StrEnum):
     REPARTIDOR = "repartidor"
 
     @classmethod
-    def from_value(cls, value: object) -> "UserRole":
+    def from_value(cls, value: object) -> UserRole:
         if isinstance(value, cls):
             return value
         if isinstance(value, str):

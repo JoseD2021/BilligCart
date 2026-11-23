@@ -5,19 +5,37 @@ from unittest.mock import AsyncMock
 from src.application.gps.broadcast import broadcast
 from src.application.gps.errors import Forbidden
 from src.application.gps.publishing import BackgroundPublisher
-from src.application.use_cases.gps.connect_courier import ConnectCourierCommand, ConnectCourierHandler
-from src.application.use_cases.gps.disconnect_courier import DisconnectCourierCommand, DisconnectCourierHandler
-from src.application.use_cases.gps.receive_courier_location import ReceiveCourierLocationCommand, ReceiveCourierLocationHandler
-from src.application.use_cases.gps.subscribe_to_tracking import SubscribeToTrackingCommand, SubscribeToTrackingHandler
-from src.application.use_cases.gps.unsubscribe_from_tracking import UnsubscribeFromTrackingCommand, UnsubscribeFromTrackingHandler
+from src.application.use_cases.gps.connect_courier import (
+    ConnectCourierCommand,
+    ConnectCourierHandler,
+)
+from src.application.use_cases.gps.disconnect_courier import (
+    DisconnectCourierCommand,
+    DisconnectCourierHandler,
+)
+from src.application.use_cases.gps.receive_courier_location import (
+    ReceiveCourierLocationCommand,
+    ReceiveCourierLocationHandler,
+)
+from src.application.use_cases.gps.subscribe_to_tracking import (
+    SubscribeToTrackingCommand,
+    SubscribeToTrackingHandler,
+)
+from src.application.use_cases.gps.unsubscribe_from_tracking import (
+    UnsubscribeFromTrackingCommand,
+    UnsubscribeFromTrackingHandler,
+)
 from src.domain.entities.gps.entities import Location
 from src.domain.entities.gps.policies import PersistenceThrottle
 from src.domain.entities.user import User
 from src.domain.errors import AccessDenied
 from src.events.contracts.gps_events import LocationRecorded
 from src.infrastructure.gps.security.supabase_order_access import SupabaseOrderAccess
+from src.infrastructure.gps.state.in_memory import (
+    InMemoryLocationStore,
+    InMemoryTrackingRegistry,
+)
 from src.infrastructure.gps.web.routes import require_courier_role
-from src.infrastructure.gps.state.in_memory import InMemoryLocationStore, InMemoryTrackingRegistry
 
 
 class Sink:

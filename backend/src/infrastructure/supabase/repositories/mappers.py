@@ -9,7 +9,7 @@ from src.domain.enums.tienda import Tienda
 
 
 def timestamp(value):
-    return datetime.fromisoformat(value.replace("Z", "+00:00")) if isinstance(value, str) else value
+    return datetime.fromisoformat(value) if isinstance(value, str) else value
 
 
 def menu_entity(row: dict) -> Menu:

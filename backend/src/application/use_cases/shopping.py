@@ -7,7 +7,13 @@ from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
 from src.application.use_cases.preferences import PreferencesUseCase
 from src.domain.entities.compra import ShoppingItem, ShoppingList
 from src.domain.entities.pedido import Pedido
-from src.domain.errors import AccessDenied, InvalidOrderState, InvalidRequestBodyError, OrderNotReady, ResourceNotFound
+from src.domain.errors import (
+    AccessDenied,
+    InvalidOrderState,
+    InvalidRequestBodyError,
+    OrderNotReady,
+    ResourceNotFound,
+)
 from src.domain.repositories.pedido_repository import PedidoRepository
 
 # Las cantidades se agregan en una unidad común; el precio del catálogo es

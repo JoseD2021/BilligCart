@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteCommand
+from src.application.commands.ingrediente.scrape_ingrediente import (
+    ScrapeIngredienteCommand,
+)
 from src.application.interfaces.auth_service import SignUpResult
 from src.domain.entities.ingrediente import Ingrediente
 from src.domain.entities.menu import Menu
