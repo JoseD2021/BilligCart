@@ -303,7 +303,7 @@ export default function CarritoScreen({ navigation, route }) {
       {paso === 2 && pedido && (
         <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
           <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
-          <PaymentPanel orderId={pedido.id} onSucceeded={() => setPaso(3)} />
+          <PaymentPanel orderId={pedido.id} autoStart onSucceeded={() => setPaso(3)} />
         </ScrollView>
       )}
 
