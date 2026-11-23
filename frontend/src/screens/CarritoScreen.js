@@ -11,7 +11,7 @@ import { getListaCompras, confirmarCompra } from "../services/comprasService";
 import { idsParaActualizar } from "../services/ingredientesService";
 import { api } from "../services/api";
 
-const PASOS = ["Productos", "Total", "Pago", "Envío"];
+const PASOS = ["Productos", "Total", "Dirección", "Pago"];
 const pesos = (n) => `$${Number(n).toLocaleString("es-CO")}`;
 
 // Misma regla que el backend: un único precio de referencia por ingrediente,
@@ -23,7 +23,7 @@ function totalDe(items) {
 
 export default function CarritoScreen({ navigation, route }) {
   const returnOrderId = route?.params?.paymentOrderId;
-  const [paso, setPaso] = useState(returnOrderId ? 2 : 0);
+  const [paso, setPaso] = useState(returnOrderId ? 3 : 0);
   const [lista, setLista] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +32,6 @@ export default function CarritoScreen({ navigation, route }) {
   const [actualizando, setActualizando] = useState(false);
   const [avisoPrecios, setAvisoPrecios] = useState(null);
   const [deseleccionados, setDeseleccionados] = useState(() => new Set()); // ids que el usuario desmarcó
-  const [guardandoEnvio, setGuardandoEnvio] = useState(false);
   const [envio, setEnvio] = useState({ direccion: "", referencia: "", lat: null, lng: null });
 
   // Productos y precios: salen de /compras. El servicio consulta precios viejos
@@ -74,20 +73,13 @@ export default function CarritoScreen({ navigation, route }) {
   useEffect(() => {
     if (!returnOrderId) return;
     let active = true;
-    setPaso(2);
+    setPaso(3);
     setPedido(null);
     api.getEstadoPedido(returnOrderId)
       .then((value) => { if (active) setPedido(value); })
       .catch((e) => { if (active) { setError(e.message); setPaso(0); } });
     return () => { active = false; };
   }, [returnOrderId]);
-
-  // Si el pedido ya tiene una dirección guardada (p. ej. al volver de Stripe), la precargamos.
-  useEffect(() => {
-    if (!pedido?.envio) return;
-    const { direccion = "", referencia = "", lat = null, lng = null } = pedido.envio;
-    setEnvio({ direccion, referencia: referencia ?? "", lat, lng });
-  }, [pedido?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function alternar(item) {
     setDeseleccionados((previo) => {
@@ -103,42 +95,36 @@ export default function CarritoScreen({ navigation, route }) {
     setDeseleccionados(todosMarcados ? new Set(conPrecio.map((item) => item.id)) : new Set());
   }
 
-  async function confirmar() {
+  // Paso Dirección -> Pago: crea el pedido con los productos marcados, le guarda la dirección
+  // y recién ahí pasa al pago. Si se repite con la misma selección, el backend devuelve el mismo pedido.
+  async function confirmarDireccion() {
     if (confirmando) return;
-    setConfirmando(true);
-    try {
-      // Crea el pedido solo con los productos marcados; Stripe cobra sobre ese pedido.
-      setPedido(await confirmarCompra({ itemsIds: seleccionados.map((item) => item.id) }));
-      setPaso(2);
-    } catch (e) {
-      Alert.alert("No se pudo confirmar", e.message);
-    } finally {
-      setConfirmando(false);
-    }
-  }
-
-  async function finalizar() {
-    if (guardandoEnvio) return;
     if (!envio.direccion.trim()) {
       Alert.alert("Falta la dirección", "Escribe la dirección de entrega para continuar.");
       return;
     }
-    setGuardandoEnvio(true);
+    setConfirmando(true);
     try {
+      const creado = await confirmarCompra({ itemsIds: seleccionados.map((item) => item.id) });
       // lat/lng los completa el mapa/GPS; mientras tanto viajan en null.
-      await api.guardarEnvio(pedido.id, {
+      await api.guardarEnvio(creado.id, {
         direccion: envio.direccion.trim(),
         referencia: envio.referencia?.trim() || null,
         lat: envio.lat ?? null,
         lng: envio.lng ?? null,
       });
+      setPedido(creado);
+      setPaso(3);
     } catch (e) {
-      Alert.alert("No se pudo guardar la dirección", e.message);
-      setGuardandoEnvio(false);
-      return;
+      Alert.alert("No se pudo continuar", e.message);
+    } finally {
+      setConfirmando(false);
     }
+  }
+
+  // Pago exitoso: limpia el carrito y abre el seguimiento del pedido (envío).
+  function irAlPedido() {
     const pedidoId = pedido.id;
-    setGuardandoEnvio(false);
     setPaso(0);
     setPedido(null);
     setEnvio({ direccion: "", referencia: "", lat: null, lng: null });
@@ -155,11 +141,11 @@ export default function CarritoScreen({ navigation, route }) {
   const noIncluidos = itemsLista.filter((item) => !seleccionados.includes(item));
   const totalSeleccion = totalDe(seleccionados);
 
-  if ((cargando && !lista && paso < 2) || (paso === 2 && !pedido)) {
+  if ((cargando && !lista && paso < 3) || (paso === 3 && !pedido)) {
     return <View style={styles.centrado}><ActivityIndicator color={colors.primary} size="large" /></View>;
   }
 
-  if ((error || !lista?.items?.length) && paso < 2) {
+  if ((error || !lista?.items?.length) && paso < 3) {
     return (
       <View style={styles.centrado}>
         <Text style={[typography.body, { textAlign: "center", paddingHorizontal: spacing.lg }]}>
@@ -291,30 +277,35 @@ export default function CarritoScreen({ navigation, route }) {
           </ScrollView>
           <Footer
             etiqueta={`${seleccionados.length} productos · ${pesos(totalSeleccion)}`}
-            boton={confirmando ? "Confirmando..." : "Confirmar y pagar"}
-            deshabilitado={!puedeConfirmar || confirmando}
-            onPress={confirmar}
+            boton="Continuar"
+            deshabilitado={!puedeConfirmar}
+            onPress={() => setPaso(2)}
             atras={() => setPaso(0)}
           />
         </>
       )}
 
-      {/* ---------- 3. PAGO (Stripe Checkout, el PaymentPanel del proyecto) ---------- */}
-      {paso === 2 && pedido && (
-        <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-          <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
-          <PaymentPanel orderId={pedido.id} autoStart onSucceeded={() => setPaso(3)} />
-        </ScrollView>
-      )}
-
-      {/* ---------- 4. ENVÍO ---------- */}
-      {paso === 3 && (
+      {/* ---------- 3. DIRECCIÓN (se guarda en el pedido; el mapa/GPS se conecta en SelectorUbicacion) ---------- */}
+      {paso === 2 && (
         <>
           <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
             <SelectorUbicacion value={envio} onChange={setEnvio} />
           </ScrollView>
-          <Footer boton={guardandoEnvio ? "Guardando..." : "Confirmar envío"} deshabilitado={guardandoEnvio} onPress={finalizar} />
+          <Footer
+            boton={confirmando ? "Guardando..." : "Confirmar dirección y pagar"}
+            deshabilitado={confirmando}
+            onPress={confirmarDireccion}
+            atras={() => setPaso(1)}
+          />
         </>
+      )}
+
+      {/* ---------- 4. PAGO (Stripe Checkout, el PaymentPanel del proyecto) ---------- */}
+      {paso === 3 && pedido && (
+        <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+          <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
+          <PaymentPanel orderId={pedido.id} autoStart onSucceeded={irAlPedido} />
+        </ScrollView>
       )}
     </View>
   );
