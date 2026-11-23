@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from src.application.commands.ingrediente.update_fetch_ingrediente import (
     UpdateFetchIngredientCommand,
@@ -13,7 +13,7 @@ from src.application.scraping.director_scraping import DirectorScraping
 from src.domain.entities.ingrediente import Ingrediente
 from src.domain.errors import (
     IngredienteNotFound,
-    IngredienteRecentlyUpdated,
+    IngredienteRecentlyFetched,
     NoOffersFound,
     ScrapingError,
 )
@@ -22,6 +22,7 @@ from src.domain.repositories.ingrediente_repository import IngredienteRepository
 
 @dataclass(frozen=True)
 class ScrapeIngredienteCommand:
+    user_id: str
     id: int
 
 class ScrapeIngredienteHandler:
@@ -34,15 +35,23 @@ class ScrapeIngredienteHandler:
         self._update_fetch = update_fetch
 
     async def handle(self, cmd: ScrapeIngredienteCommand) -> Ingrediente:
+        logging.getLogger(__name__).info("probando scraping para ingr ID %s para usuario %s", cmd.id, cmd.user_id)
+        
         ing = await self._ingr.get_by_id(cmd.id)
         if ing is None:
             raise IngredienteNotFound(cmd.id)
 
-        if ing.last_updated is not None and ing.shop is not None:
-            lastUpdateDiff = datetime.now(UTC) - ing.last_updated
+        last_fetched = ing.last_fetched
+        if last_fetched is not None:
+            if last_fetched.tzinfo is None:
+                last_fetched = last_fetched.replace(tzinfo=UTC)
+                
+            fetched_delta = datetime.now(UTC) - last_fetched
+            
+            logging.getLogger(__name__).info("Ingrediente con ID %s fue buscado el %s | hace %s", cmd.id, last_fetched, fetched_delta)
 
-            if lastUpdateDiff.days < self._DAYS_TO_UPDATE:
-                raise IngredienteRecentlyUpdated(cmd.id, ing.last_updated)
+            if ing.shop is not None and fetched_delta < timedelta(days=self._DAYS_TO_UPDATE):
+                raise IngredienteRecentlyFetched(cmd.id, last_fetched)
 
         ofertas = [o for r in await asyncio.gather(
             *(self._buscar(builder=b, termino=ing.name, limit=5) for b in self._builders)

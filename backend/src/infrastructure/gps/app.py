@@ -17,12 +17,13 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     supabase = await create_supabase_client()
+    role_supabase = await create_supabase_client()
     bus = RabbitMQEventBus()
     await bus.connect()  # conectar al arrancar evita que dos publicaciones simultáneas abran dos conexiones
 
     app.state.supabase = supabase
     app.state.gps = build_gps_container(
-        auth=SupabaseAuthService(supabase),
+        auth=SupabaseAuthService(supabase, role_client=role_supabase),
         access=SupabaseOrderAccess(supabase),
         events=bus,
         settings=GpsSettings.from_env(),

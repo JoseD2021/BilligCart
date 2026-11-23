@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -19,4 +21,8 @@ class ShoppingList:
     total: float
     items: list[ShoppingItem]
     puede_confirmar: bool
+    menu_completo: bool
     precios_pendientes: int
+    # Fecha ISO del último fetch por id de ingrediente. No forma parte del
+    # pedido: solo permite al cliente saber qué precios pueden refrescarse.
+    ultimos_fetch: dict[int, str | None]

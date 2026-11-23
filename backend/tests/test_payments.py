@@ -188,7 +188,7 @@ class PaymentTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(db.execute("SELECT payment_id FROM paid_orders").fetchone()[0], payment.id)
 
     async def test_worker_delays_transient_errors_and_only_acks_after_forward(self):
-        payment = await self.payment()
+        await self.payment()
         worker = PaymentWorker(self.store, SimpleNamespace(create_checkout=AsyncMock(side_effect=PaymentUnavailable())))
         worker.channel = SimpleNamespace(default_exchange=SimpleNamespace(publish=AsyncMock()))
         message = SimpleNamespace(body=self.store.pending_events()[0]["body"].encode(), headers={},

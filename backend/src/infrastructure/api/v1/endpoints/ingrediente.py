@@ -44,9 +44,8 @@ async def update_ingrediente(id: int, body: UpdateIngredienteBody, handler = Dep
     return ingrediente
 
 @router.post("/fetch/{id}", status_code=200)
-async def fetch_best(id: int, handler = Depends(get_scrape_ingredient_handler), user=Depends(get_current_user), access=Depends(get_access_policy)):
-    access.catalog_admin(user)
-    ingrediente = await handler.handle(ScrapeIngredienteCommand(id=id))
+async def fetch_best(id: int, handler = Depends(get_scrape_ingredient_handler), user=Depends(get_current_user)):
+    ingrediente = await handler.handle(ScrapeIngredienteCommand(user_id= user.id, id=id))
     return ingrediente
 
 @router.get("/get/{id}", status_code=200)

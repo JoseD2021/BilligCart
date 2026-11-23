@@ -86,7 +86,7 @@ def verify_webhook(raw: bytes, signature: str, secret: str, *, now=None):
         raise ValueError("Invalid signature")
     event = json.loads(raw)
     if not isinstance(event, dict) or not isinstance(event.get("id"), str):
-        raise ValueError("Invalid event")
+        raise TypeError("Invalid event")
     return event
 
 

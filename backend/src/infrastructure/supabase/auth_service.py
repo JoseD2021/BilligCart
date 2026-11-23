@@ -1,22 +1,37 @@
+import logging
 from typing import Any
 
 from supabase_auth.errors import AuthApiError, AuthWeakPasswordError
 
-from src.application.interfaces.auth_service import AuthService, AuthSession
+from src.application.interfaces.auth_service import (
+    AuthService,
+    AuthSession,
+    SignUpResult,
+)
 from src.domain.entities.user import User
+from src.domain.enums.role import UserRole
 from src.domain.errors import (
     EmailAlreadyRegistered,
     InvalidCredentials,
     InvalidEmail,
+    InvalidRequestBodyError,
+    InvalidRole,
     WeakPassword,
 )
 
 
 class SupabaseAuthService(AuthService):
-    def __init__(self, client: Any):
+    def __init__(self, client: Any, role_client: Any | None = None):
         self._client = client
+        # Auth (sign_in/sign_up) mutates the SDK client's Authorization header.
+        # Reading Roles must use a separate client that always keeps the
+        # service key, otherwise RLS hides the rows and roles fall back to user.
+        self._role_client = role_client or client
 
-    async def sign_up(self, email, password) -> User:
+    async def sign_up(self, email, password, role=UserRole.USER.value) -> SignUpResult:
+        rol = str(role or "").strip().lower()
+        if rol not in (UserRole.USER.value, UserRole.REPARTIDOR.value):
+            raise InvalidRole("Rol inválido para el registro.")
         try:
             res = await self._client.auth.sign_up({"email": email, "password": password})
         except AuthWeakPasswordError as e:
@@ -29,7 +44,19 @@ class SupabaseAuthService(AuthService):
                     raise InvalidEmail(e.message)
                 case _:
                     raise
-        return User(id=res.user.id, email=res.user.email)
+        if res is None or res.user is None:
+            raise InvalidRequestBodyError("No se pudo crear el usuario.")
+        user = User(id=res.user.id, email=res.user.email, role=rol)
+        await self.assign_role(user.id, rol)
+        session = None
+        if getattr(res, "session", None) is not None:
+            session = AuthSession(res.session.access_token, res.session.refresh_token)
+        return SignUpResult(user, session)
+
+    async def assign_role(self, user_id, role) -> None:
+        await self._role_client.table("Roles").upsert(
+            {"user_id": str(user_id), "rol": role}, on_conflict="user_id"
+        ).execute()
 
     async def sign_in(self, email, password) -> AuthSession:
         try:
@@ -44,6 +71,21 @@ class SupabaseAuthService(AuthService):
                     raise
         return AuthSession(res.session.access_token, res.session.refresh_token)
 
+    async def _get_role(self, user_id: str) -> str:
+        log = logging.getLogger(__name__)
+        uid = str(user_id)
+        try:
+            res = await self._role_client.table("Roles").select("rol").eq("user_id", uid).limit(1).execute()
+            raw_role = res.data[0].get("rol") if res.data else None
+        except Exception:
+            log.exception("No se pudo leer rol desde tabla Roles user_id=%s", uid)
+            raw_role = None
+        role = UserRole.from_value(raw_role)
+        if raw_role and role is UserRole.USER and str(raw_role).strip().lower() != UserRole.USER.value:
+            log.warning("Rol desconocido en Roles user_id=%s rol=%r", uid, raw_role)
+        log.info("Rol resuelto user_id=%s role=%s", uid, role.value)
+        return role.value
+
     async def get_user_from_token(self, token) -> User:
         try:
             res = await self._client.auth.get_user(token)
@@ -51,5 +93,5 @@ class SupabaseAuthService(AuthService):
             raise InvalidCredentials("Token inválido o expirado")
         if res is None or res.user is None:
             raise InvalidCredentials("Token inválido o expirado")
-        return User(id=res.user.id, email=res.user.email,
-                    role=(res.user.app_metadata or {}).get("role", "user"))
+        role = await self._get_role(res.user.id)
+        return User(id=res.user.id, email=res.user.email, role=role)

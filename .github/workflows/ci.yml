@@ -136,8 +136,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck --if-present
 
-      - name: Tests (Jest)
-        run: npx jest --ci --passWithNoTests
+      - name: Tests
+        run: npm test --if-present
 
   publish-backend:
     name: Publicar imagen del backend

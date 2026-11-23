@@ -14,14 +14,15 @@ class UnsubscribeFromTrackingCommand:
 
 
 class UnsubscribeFromTrackingHandler:
-    """El cliente sale del mapa: si era el último, el repartidor deja de transmitir."""
+    """El cliente sale del mapa: si era el último, el repartidor vuelve a idle."""
 
-    def __init__(self, registry: TrackingRegistry) -> None:
+    def __init__(self, registry: TrackingRegistry, idle_interval_ms: int = 10000) -> None:
         self._registry = registry
+        self._idle_interval = idle_interval_ms
 
     async def handle(self, cmd: UnsubscribeFromTrackingCommand) -> None:
         remaining = await self._registry.remove_subscriber(cmd.order_id, cmd.sink)
         if remaining == 0:
             courier = await self._registry.get_courier(cmd.order_id)
             if courier is not None:
-                await safe_send(courier, messages.STOP_STREAMING)
+                await safe_send(courier, messages.start_streaming(self._idle_interval, "idle"))

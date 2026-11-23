@@ -6,8 +6,8 @@ from src.domain.entities.gps.entities import Location
 STOP_STREAMING: dict = {"type": "stop_streaming"}
 
 
-def start_streaming(interval_ms: int) -> dict:
-    return {"type": "start_streaming", "interval_ms": interval_ms}
+def start_streaming(interval_ms: int, mode: str = "live") -> dict:
+    return {"type": "start_streaming", "interval_ms": interval_ms, "mode": mode}
 
 
 def courier_status(online: bool) -> dict:

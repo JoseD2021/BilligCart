@@ -16,17 +16,19 @@ class ConnectCourierCommand:
 
 
 class ConnectCourierHandler:
-    """El repartidor se conecta (su app lo hace sola al tener un pedido activo)."""
+    """El repartidor se conecta y transmite en modo idle; live si hay clientes."""
 
     def __init__(
         self,
         access: OrderAccessPolicy,
         registry: TrackingRegistry,
         stream_interval_ms: int,
+        idle_interval_ms: int | None = None,
     ) -> None:
         self._access = access
         self._registry = registry
         self._interval = stream_interval_ms
+        self._idle_interval = idle_interval_ms or max(stream_interval_ms, 10000)
 
     async def handle(self, cmd: ConnectCourierCommand) -> None:
         if not await self._access.is_courier(cmd.user_id, cmd.order_id):
@@ -34,6 +36,7 @@ class ConnectCourierHandler:
 
         await self._registry.set_courier(cmd.order_id, cmd.sink)
         await broadcast(self._registry, cmd.order_id, messages.courier_status(True))
-        # Si ya hay alguien mirando el mapa, empieza a transmitir de inmediato.
         if await self._registry.get_subscribers(cmd.order_id):
-            await cmd.sink.send(messages.start_streaming(self._interval))
+            await cmd.sink.send(messages.start_streaming(self._interval, "live"))
+        else:
+            await cmd.sink.send(messages.start_streaming(self._idle_interval, "idle"))

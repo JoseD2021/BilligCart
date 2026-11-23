@@ -9,9 +9,16 @@ class AuthSession:
     access_token: str
     refresh_token: str
 
+
+@dataclass(frozen=True)
+class SignUpResult:
+    user: User
+    session: AuthSession | None = None
+
+
 class AuthService(ABC):
     @abstractmethod
-    async def sign_up(self, email: str, password: str) -> User: ...
+    async def sign_up(self, email: str, password: str, role: str = "user") -> SignUpResult: ...
     @abstractmethod
     async def sign_in(self, email: str, password: str) -> AuthSession: ...
     @abstractmethod

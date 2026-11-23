@@ -111,8 +111,11 @@ services:
   ollama:
     image: ollama/ollama
     container_name: ollama
+    restart: unless-stopped
     expose:
       - "11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: "-1"
     volumes:
       - ollama:/root/.ollama
     networks:
@@ -149,6 +152,13 @@ services:
           -H "Content-Type: application/json" \
           -d "{\"name\":\"$${OLLAMA_MODEL}\"}"
         echo "Descarga finalizada."
+        echo "Precargando $${OLLAMA_MODEL} en memoria..."
+        curl --fail --show-error -sS \
+          -X POST http://ollama:11434/api/generate \
+          -H "Content-Type: application/json" \
+          -d "{\"model\":\"$${OLLAMA_MODEL}\",\"keep_alive\":-1}" >/dev/null
+        echo "Modelo precargado:"
+        curl -fsS http://ollama:11434/api/ps
     restart: "no"
     networks:
       - internal_network
@@ -218,7 +228,7 @@ services:
       - "traefik.http.routers.gps.rule=PathPrefix(`/ws`)"
       - "traefik.http.routers.gps.entrypoints=web"
       - "traefik.http.services.gps.loadbalancer.server.port=8001"
-      - "traefik.docker.network=proxy_network"
+      - "traefik.docker.network=internal_network"
     depends_on:
       rabbitmq:
         condition: service_healthy

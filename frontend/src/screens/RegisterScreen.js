@@ -18,6 +18,7 @@ export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
+  const [repartidor, setRepartidor] = useState(false);
   const [errorLocal, setErrorLocal] = useState(null);
   const [info, setInfo] = useState(null);
   const [cargando, setCargando] = useState(false);
@@ -38,7 +39,11 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
     setCargando(true);
-    const res = await registrarse({ email: email.trim(), password });
+    const res = await registrarse({
+      email: email.trim(),
+      password,
+      role: repartidor ? "repartidor" : "user",
+    });
     setCargando(false);
     if (res.ok && res.confirmarCorreo) {
       setInfo("Te enviamos un correo para confirmar tu cuenta. Confírmalo y luego inicia sesión.");
@@ -87,6 +92,22 @@ export default function RegisterScreen({ navigation }) {
           secureTextEntry
         />
 
+        <TouchableOpacity
+          style={styles.checkFila}
+          onPress={() => setRepartidor((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.checkBox, repartidor && styles.checkBoxActivo]}>
+            {repartidor && <Text style={styles.checkTexto}>X</Text>}
+          </View>
+          <Text style={typography.body}>Registrarme como repartidor</Text>
+        </TouchableOpacity>
+        <Text style={[typography.bodyMuted, styles.checkAyuda]}>
+          {repartidor
+            ? "Podrás ver pedidos disponibles y compartir tu ubicación."
+            : "Podrás planear menús y comprar ingredientes."}
+        </Text>
+
         {(errorLocal || error) && (
           <Text style={styles.errorTexto}>{errorLocal || error}</Text>
         )}
@@ -123,6 +144,20 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
   },
+  checkFila: { flexDirection: "row", alignItems: "center", marginTop: spacing.lg },
+  checkBox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 4,
+    marginRight: spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkBoxActivo: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkTexto: { color: colors.white, fontWeight: "700", fontSize: 13 },
+  checkAyuda: { marginTop: spacing.xs },
   errorTexto: { color: colors.warning, marginTop: spacing.sm, fontSize: 13 },
   infoTexto: { color: colors.primary, marginTop: spacing.sm, fontSize: 13, fontWeight: "600" },
   boton: {

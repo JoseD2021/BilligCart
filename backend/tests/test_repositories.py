@@ -10,6 +10,7 @@ from src.domain.entities.plato_ingrediente import PlatoIngrediente
 from src.domain.entities.preferencias import Preferencias
 from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.enums.tienda import Tienda
+from src.domain.errors import InvalidRole
 from src.infrastructure.supabase.auth_service import SupabaseAuthService
 from src.infrastructure.supabase.repositories.ingrediente_repository import (
     SupabaseIngredienteRepository,
@@ -83,16 +84,65 @@ class RepositoryTests(unittest.IsolatedAsyncioTestCase):
         user = await SupabaseAuthService(client).get_user_from_token("token")
         self.assertEqual(user.role, "user")
 
+    async def test_admin_role_from_database_is_not_downgraded_to_user(self):
+        client, _ = database({"rol": "admin"})
+        auth_user = SimpleNamespace(id="user", email="user@example.com")
+        client.auth = SimpleNamespace(
+            get_user=AsyncMock(return_value=SimpleNamespace(user=auth_user))
+        )
+        user = await SupabaseAuthService(client).get_user_from_token("token")
+        self.assertEqual(user.role, "admin")
+
+    async def test_role_lookup_uses_trusted_client_after_login_mutates_auth_client(self):
+        auth_user = SimpleNamespace(id="user", email="user@example.com")
+        auth_client = SimpleNamespace(auth=SimpleNamespace(
+            get_user=AsyncMock(return_value=SimpleNamespace(user=auth_user))
+        ))
+        role_client, _ = database({"rol": "admin"})
+        user = await SupabaseAuthService(auth_client, role_client).get_user_from_token("token")
+        self.assertEqual(user.role, "admin")
+
+    async def test_sign_up_persists_selected_role_with_trusted_client(self):
+        auth_client = SimpleNamespace(auth=SimpleNamespace(sign_up=AsyncMock(return_value=SimpleNamespace(
+            user=SimpleNamespace(id="uid", email="repartidor@example.com"), session=None,
+        ))))
+        role_client, role_query = database(None)
+        result = await SupabaseAuthService(auth_client, role_client).sign_up(
+            "repartidor@example.com", "secret1", "repartidor"
+        )
+        self.assertEqual(result.user.role, "repartidor")
+        self.assertIsNone(result.session)
+        role_query.upsert.assert_called_once_with(
+            {"user_id": "uid", "rol": "repartidor"}, on_conflict="user_id"
+        )
+        role_query.execute.assert_awaited()
+
+    async def test_sign_up_rejects_admin_and_unknown_roles(self):
+        auth_client = SimpleNamespace(auth=SimpleNamespace(sign_up=AsyncMock()))
+        role_client, _ = database(None)
+        service = SupabaseAuthService(auth_client, role_client)
+        for role in ("admin", "otro"):
+            with self.subTest(role=role), self.assertRaises(InvalidRole):
+                await service.sign_up("user@example.com", "secret1", role)
+        auth_client.auth.sign_up.assert_not_awaited()
+
     async def test_duplicate_checkout_does_not_overwrite_order_status(self):
-        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "etapa": 2}
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "en_camino"}
         client, query = database(row)
         result = await SupabasePedidoRepository(client).create(Pedido("new-order", "user", 1, "key", [], 5000))
         self.assertTrue(query.upsert.call_args.kwargs["ignore_duplicates"])
-        self.assertEqual(result.etapa, 2)
+        self.assertNotIn("etapa", query.upsert.call_args.args[0])
+        self.assertEqual(result.estado, "en_camino")
         self.assertEqual(result.id, "order")
 
+    async def test_order_state_is_read_only_from_estado_column(self):
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "entregado", "etapa": 0}
+        client, _ = database(row)
+        result = await SupabasePedidoRepository(client).get_by_id("user", "order")
+        self.assertEqual(result.estado, "entregado")
+
     async def test_order_read_always_filters_owner(self):
-        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "etapa": 0}
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "pendiente"}
         client, query = database(row)
         await SupabasePedidoRepository(client).get_by_id("user", "order")
         query.eq.assert_any_call("user_id", "user")
