@@ -86,6 +86,31 @@ services:
     networks:
       - internal_network
 
+  # Desarrollo local: recibe las confirmaciones de Stripe sin login manual.
+  stripe_cli:
+    image: stripe/stripe-cli:v1.55.14
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        case "$${STRIPE_API_KEY}" in
+          sk_test_?*) ;;
+          *) echo "Configura STRIPE_SECRET_KEY con una clave sk_test_ en backend/.env." >&2; exit 1 ;;
+        esac
+        exec stripe listen \
+          --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed \
+          --forward-to http://backend:8000/v1/pagos/webhook/stripe
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_DEVICE_NAME: billigcart-docker
+    volumes:
+      - stripe-cli-config:/root/.config/stripe
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - internal_network
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: billigcart-rabbitmq
@@ -238,3 +263,4 @@ volumes:
   ollama:
   rabbitmq-data:
   payment-journal:
+  stripe-cli-config:

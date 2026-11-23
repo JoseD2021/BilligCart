@@ -113,24 +113,38 @@ No se almacenan tarjetas. El modulo no implementa reembolsos, disputas ni entreg
    en Stripe TEST; los precios de referencia del carrito no habilitan cobros reales.
 3. Configura `STRIPE_SUCCESS_URL` y `STRIPE_CANCEL_URL` con la URL accesible del frontend,
    por ejemplo `http://localhost:8081/`. El servidor agrega el pedido y el tipo de retorno.
-4. Inicia Stripe CLI:
+4. Desde `backend`, inicia el listener incluido en Docker Compose:
 
    ```bash
-   stripe login
-   stripe listen --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed --forward-to localhost:8000/v1/pagos/webhook/stripe
+   docker compose up -d stripe_cli
+   docker compose logs stripe_cli
    ```
 
-5. Guarda el secreto `whsec_...` que muestra la CLI en `STRIPE_WEBHOOK_SECRET`.
-   Debe corresponder a ESE listener. No sirve el secreto de otro endpoint del Dashboard.
-   Mantener la terminal de `stripe listen` abierta mientras se hace el pago.
-6. Desde `backend`, aplicar el archivo .env a los dos procesos:
+   El servicio usa la imagen oficial de Stripe CLI, version 1.55.14, y se autentica
+   con `STRIPE_SECRET_KEY` del .env. No requiere instalar Stripe CLI en el equipo ni
+   ejecutar `stripe login`. Rechaza claves que no empiecen por `sk_test_`.
+   Escucha los cuatro eventos de Checkout usados por el backend y los reenvia a
+   `http://backend:8000/v1/pagos/webhook/stripe` por la red interna de Docker.
+   No publica puertos. El volumen `stripe-cli-config` conserva la configuracion de la CLI.
+5. Solo en la configuracion inicial, guarda el secreto `whsec_...` que muestra el
+   contenedor en `STRIPE_WEBHOOK_SECRET`. Debe corresponder a ESE listener: no usar
+   el secreto de la CLI instalada en el equipo ni el de otro endpoint del Dashboard.
+   Si cambia la cuenta o la clave de API, vuelve a comprobar el secreto del contenedor.
+   No ejecutes a la vez otro listener manual reenviando al mismo backend.
+6. Aplica el archivo .env a los procesos y deja todos los servicios iniciados:
 
    ```bash
-   docker compose up -d --build --force-recreate --no-deps backend event_worker payment_worker
+   docker compose up -d --build
    ```
 
-   RabbitMQ debe estar iniciado. Si todavia no lo esta: `docker compose up -d rabbitmq`.
-   Reiniciar solo el proceso no recarga env_file: recrear los contenedores tras cambiar claves.
+   Este es tambien el unico comando necesario para los siguientes arranques: Compose
+   detecta cambios del .env y recrea los servicios afectados. `docker compose restart`
+   no recarga las variables. No hace falta dejar otra terminal con `stripe listen`.
+   Cada companero necesita su .env inicial; las claves no se incluyen en Git.
+   Consulta el reenvio con `docker compose logs -f stripe_cli` y el procesamiento con
+   `docker compose logs -f backend event_worker payment_worker`.
+   Este contenedor es para desarrollo local. En un despliegue publico se registra la
+   URL HTTPS del webhook en Stripe, se usa su secreto y se prescinde del listener local.
 7. Inicia el frontend, inicia sesion y confirma un pedido desde el carrito. Si faltan precios,
    la pantalla actual permite excluirlos explicitamente siempre que haya productos cotizados.
    El panel de Pago muestra los problemas de configuracion y mantiene deshabilitado el boton

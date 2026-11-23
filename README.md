@@ -124,10 +124,14 @@ cd backend
 docker compose up -d --build
 ```
 
+Para los pagos de prueba, Compose tambien inicia `stripe_cli` y reenvia las
+confirmaciones al backend sin ejecutar `stripe login` ni `stripe listen` manualmente.
+La configuracion inicial de las claves del `.env` se explica en [backend/PAYMENTS.md](backend/PAYMENTS.md#configuracion-y-prueba-manual-en-stripe-test).
+
 Para consultar los registros de los servicios principales (también desde `backend`):
 
 ```bash
-docker compose logs -f backend ai_worker event_worker payment_worker
+docker compose logs -f backend ai_worker event_worker payment_worker stripe_cli
 ```
 
 Para detener los servicios, ejecuta desde esa misma carpeta:
