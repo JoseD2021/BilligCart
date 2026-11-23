@@ -58,7 +58,8 @@ async function leerError(res) {
   if (res.status === 422) return new ApiError(res.status, "ValidationError", "Revisa los datos ingresados.");
   // La generación puede agotar el tiempo de espera o no tener mensajería disponible.
   if (res.status === 504) return new ApiError(res.status, "AITimeout", "La IA tardó demasiado en responder.");
-  if (res.status === 503) return new ApiError(res.status, "AIUnavailable", "El servicio de IA no está disponible.");
+  if (res.status === 503) return new ApiError(res.status, codigo ?? "ServiceUnavailable",
+    body?.message ?? (typeof body?.detail === "string" ? body.detail : "El servicio no está disponible. Intenta de nuevo."));
   return new ApiError(res.status, codigo, body?.message ?? (typeof body?.detail === "string" ? body.detail : "El servidor tuvo un problema. Intenta de nuevo."));
 }
 
@@ -93,6 +94,7 @@ export const api = {
     method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ order_id: orderId }),
   }),
   getPagoActual: (orderId) => request(`/pagos/pedido/${encodeURIComponent(orderId)}`),
+  getConfiguracionPagos: () => request("/pagos/configuracion"),
   getPreferencias: () => request("/preferencias"),
   guardarPreferencias: (data) => request("/preferencias", { method: "PUT", body: JSON.stringify(data) }),
   getMenuSemanal: () => request("/menu/weekly"),

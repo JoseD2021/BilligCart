@@ -1,8 +1,9 @@
 # BilligCart
 
 La integracion de pagos con Stripe, sus limites actuales y las instrucciones de prueba
-estan documentados en [backend/PAYMENTS.md](backend/PAYMENTS.md). Los cobros permanecen
-bloqueados hasta conectar los precios finales, salvo el modo de pruebas explicito.
+estan documentados en [backend/PAYMENTS.md](backend/PAYMENTS.md). En Stripe TEST se utiliza
+el total del pedido en COP; las claves live permanecen bloqueadas mientras los precios
+sigan siendo de referencia. Completa las claves personales indicadas en backend/.env-example.
 
 BilligCart es una aplicación que genera menús semanales con inteligencia artificial, consulta productos de supermercados para encontrar precios y guarda la información del menú y sus ingredientes en Supabase.
 
@@ -123,10 +124,14 @@ cd backend
 docker compose up -d --build
 ```
 
+Para los pagos de prueba, Compose tambien inicia `stripe_cli` y reenvia las
+confirmaciones al backend sin ejecutar `stripe login` ni `stripe listen` manualmente.
+La configuracion inicial de las claves del `.env` se explica en [backend/PAYMENTS.md](backend/PAYMENTS.md#configuracion-y-prueba-manual-en-stripe-test).
+
 Para consultar los registros de los servicios principales (también desde `backend`):
 
 ```bash
-docker compose logs -f backend ai_worker event_worker
+docker compose logs -f backend ai_worker event_worker payment_worker stripe_cli
 ```
 
 Para detener los servicios, ejecuta desde esa misma carpeta:

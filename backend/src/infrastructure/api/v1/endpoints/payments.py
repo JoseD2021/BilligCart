@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from src.domain.entities.payment import PaymentUnavailable
 from src.infrastructure.api.v1.dependencies import get_current_user
 from src.infrastructure.payments.config import get_payments, payment_store
+from src.infrastructure.payments.settings import get_payment_settings
 from src.infrastructure.payments.stripe_gateway import receive_webhook, verify_webhook
 
 router = APIRouter(prefix="/pagos", tags=["Pagos"])
@@ -32,6 +33,7 @@ def public_payment(payment):
     return {"id": payment.id, "order_id": payment.order_id, "status": payment.status,
             "amount_minor": payment.amount_minor, "currency": payment.currency,
             "checkout_url": payment.checkout_url if payment.status == "ready" else None,
+            "error": payment.error if payment.status in ("review_required", "failed") else None,
             "message": messages[payment.status], "attempt": payment.attempt}
 
 
@@ -50,6 +52,11 @@ async def current_payment(order_id: UUID, user=Depends(get_current_user), servic
     return public_payment(service.current(str(user.id), str(order_id)))
 
 
+@router.get("/configuracion")
+async def payment_configuration(user=Depends(get_current_user), settings=Depends(get_payment_settings)):
+    return settings.public()
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request, stripe_signature: str = Header(default="")):
     secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -62,7 +69,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(defaul
             raise HTTPException(413, "Evento demasiado grande")
     try:
         event = verify_webhook(bytes(raw), stripe_signature, secret)
-        receive_webhook(payment_store(), event, livemode=os.getenv("STRIPE_SECRET_KEY", "").startswith("sk_live_"))
+        receive_webhook(payment_store(), event, livemode=False)
     except (ValueError, KeyError, TypeError):
         raise HTTPException(400, "Evento de Stripe invalido")
     # The durable inbox, payment transition and outbox are committed before ACK.

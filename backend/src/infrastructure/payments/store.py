@@ -4,6 +4,7 @@ Single-host SQLite adapter. API and workers share the same mounted directory.
 All state changes and outbox inserts commit in the same transaction.
 """
 import json
+import logging
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -15,6 +16,8 @@ from src.domain.entities.payment import Payment, PaymentQuote, PaymentStatus
 from src.domain.errors import InvalidRequestBodyError
 from src.events.contracts.event_envelope import EventEnvelope
 from src.events.contracts.payment_events import PaymentRequested, PaymentSucceeded
+
+logger = logging.getLogger(__name__)
 
 
 class PaymentStore:
@@ -32,6 +35,9 @@ class PaymentStore:
                     event_id TEXT PRIMARY KEY, body TEXT NOT NULL, sent INTEGER NOT NULL DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS webhook_inbox (event_id TEXT PRIMARY KEY);
                 CREATE TABLE IF NOT EXISTS projection_inbox (event_id TEXT PRIMARY KEY);
+                CREATE TABLE IF NOT EXISTS projection_receipts (
+                    event_id TEXT, target TEXT, applied_at REAL NOT NULL,
+                    PRIMARY KEY(event_id, target));
                 CREATE TABLE IF NOT EXISTS paid_orders (
                     order_id TEXT PRIMARY KEY, payment_id TEXT NOT NULL, event TEXT NOT NULL);
             ''')
@@ -88,6 +94,7 @@ class PaymentStore:
                 (user_id, key)).fetchone())
 
     def create(self, quote: PaymentQuote, key: str) -> Payment:
+        created_event = None
         with self.transaction() as db:
             keyed = self._entity(db.execute(
                 "SELECT p.data FROM payments p JOIN request_keys k ON p.id=k.payment_id WHERE k.user_id=? AND k.key=?",
@@ -108,9 +115,13 @@ class PaymentStore:
                                   quote.currency.lower(), quote.version, quote.expires_at.timestamp(),
                                   PaymentStatus.QUEUED, time.time(), len(existing) + 1)
                 self._write(db, payment)
-                self._event(db, PaymentRequested(payment_id=payment.id))
+                created_event = PaymentRequested(payment_id=payment.id)
+                self._event(db, created_event)
             db.execute("INSERT INTO request_keys VALUES(?,?,?)", (quote.user_id, key, payment.id))
-            return payment
+        if created_event:
+            logger.info("payment_request_recorded payment_id=%s order_id=%s event_id=%s status=%s",
+                        payment.id, payment.order_id, created_event.event_id, payment.status.value)
+        return payment
 
     def update_queued(self, payment_id, **changes):
         with self.transaction() as db:
@@ -121,8 +132,10 @@ class PaymentStore:
             return payment
 
     def webhook(self, event_id, payment_id, session, status):
+        success_event = None
         with self.transaction() as db:
             if db.execute("SELECT 1 FROM webhook_inbox WHERE event_id=?", (event_id,)).fetchone():
+                logger.info("stripe_webhook_duplicate stripe_event_id=%s payment_id=%s", event_id, payment_id)
                 return
             payment = self._entity(db.execute("SELECT data FROM payments WHERE id=?", (payment_id,)).fetchone())
             if payment is None:
@@ -140,12 +153,18 @@ class PaymentStore:
                 payment = replace(payment, status=status, provider_session_id=session["id"], error=None)
                 self._write(db, payment)
                 if status == PaymentStatus.SUCCEEDED:
-                    self._event(db, PaymentSucceeded(
+                    success_event = PaymentSucceeded(
                         payment_id=payment.id, order_id=payment.order_id, user_id=payment.user_id,
                         amount_minor=payment.amount_minor, currency=payment.currency,
                         provider_session_id=session["id"],
-                    ))
+                    )
+                    self._event(db, success_event)
             db.execute("INSERT INTO webhook_inbox VALUES(?)", (event_id,))
+        logger.info("stripe_webhook_applied stripe_event_id=%s payment_id=%s status=%s",
+                    event_id, payment_id, payment.status.value)
+        if success_event:
+            logger.info("payment_event_recorded event_type=%s event_id=%s payment_id=%s order_id=%s",
+                        success_event.event_type, success_event.event_id, payment.id, payment.order_id)
 
     def pending_events(self):
         with self.transaction() as db:
@@ -155,11 +174,37 @@ class PaymentStore:
         with self.transaction() as db:
             db.execute("UPDATE outbox SET sent=1 WHERE event_id=?", (event_id,))
 
+    def stored_success(self, event_id):
+        with self.transaction() as db:
+            row = db.execute("SELECT body FROM outbox WHERE event_id=?", (event_id,)).fetchone()
+        if row is None:
+            return None
+        envelope = EventEnvelope.from_json(row[0])
+        return envelope if envelope.event_type == PaymentSucceeded.EVENT_TYPE else None
+
+    def record_projection_receipt(self, event_id, target):
+        with self.transaction() as db:
+            db.execute("INSERT OR IGNORE INTO projection_receipts VALUES(?,?,?)", (event_id, target, time.time()))
+
+    def requeue_unprojected_successes(self, target):
+        """Replay durable successes after adding a new destination or after a crash."""
+        with self.transaction() as db:
+            rows = db.execute('''
+                SELECT o.event_id FROM outbox o
+                WHERE json_extract(o.body, '$.event_type') = ?
+                AND NOT EXISTS (SELECT 1 FROM projection_receipts p
+                                WHERE p.event_id=o.event_id AND p.target=?)
+            ''', (PaymentSucceeded.EVENT_TYPE, target)).fetchall()
+            for row in rows:
+                db.execute("UPDATE outbox SET sent=0 WHERE event_id=?", (row[0],))
+        return len(rows)
+
     def apply_projection(self, event):
         """Executable local projection; replace via PaymentProjection when schema is ready."""
         with self.transaction() as db:
             if db.execute("SELECT 1 FROM projection_inbox WHERE event_id=?", (event["event_id"],)).fetchone():
-                return
-            db.execute("INSERT OR IGNORE INTO paid_orders VALUES(?,?,?)",
-                       (event["order_id"], event["payment_id"], json.dumps(event)))
+                return False
+            inserted = db.execute("INSERT OR IGNORE INTO paid_orders VALUES(?,?,?)",
+                                  (event["order_id"], event["payment_id"], json.dumps(event))).rowcount > 0
             db.execute("INSERT INTO projection_inbox VALUES(?)", (event["event_id"],))
+        return inserted

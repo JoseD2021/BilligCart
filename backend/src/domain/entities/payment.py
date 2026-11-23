@@ -58,3 +58,6 @@ class Payment:
     checkout_url: str | None = None
     first_attempt_at: float | None = None
     error: str | None = None
+    # Only replaced after explicit reconciliation of a definitively rejected request.
+    # Automatic retries always reuse this stored key (or the original payment id).
+    provider_idempotency_key: str | None = None

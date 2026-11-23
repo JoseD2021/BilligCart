@@ -12,12 +12,17 @@ from src.events.application.ai_event_handlers import (
     on_menu_generation_started,
 )
 from src.events.application.event_registry import EventRegistry
+from src.events.application.payment_event_handlers import (
+    on_payment_requested,
+    on_payment_succeeded,
+)
 from src.events.contracts.ai_menu_events import (
     MenuGenerationCompleted,
     MenuGenerationFailed,
     MenuGenerationStarted,
 )
 from src.events.contracts.gps_events import LocationRecorded
+from src.events.contracts.payment_events import PaymentRequested, PaymentSucceeded
 from src.events.infrastructure.event_worker import run_event_worker
 from src.infrastructure.api.v1.dependencies import (
     get_ingrediente_repository,
@@ -25,6 +30,8 @@ from src.infrastructure.api.v1.dependencies import (
     get_plato_ingrediente_repository,
     get_plato_repository,
 )
+from src.infrastructure.payments.config import payment_store
+from src.infrastructure.payments.supabase_projection import SupabasePaymentProjection
 from src.infrastructure.supabase.client import create_supabase_client
 
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +67,9 @@ async def main() -> None:
     registry.register(MenuGenerationCompleted, functools.partial(on_menu_generation_completed, use_case=use_case))
     registry.register(MenuGenerationFailed, on_menu_generation_failed)
     registry.register(LocationRecorded, functools.partial(on_location_recorded, supabase=supabase))
+    projection = SupabasePaymentProjection(payment_store(), supabase)
+    registry.register(PaymentRequested, on_payment_requested)
+    registry.register(PaymentSucceeded, functools.partial(on_payment_succeeded, projection=projection))
 
     await run_event_worker(
         registry=registry,

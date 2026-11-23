@@ -63,10 +63,10 @@ class ProcessPayment:
         except PaymentUnavailable:
             self.store.update_queued(payment_id, error="Stripe temporalmente no disponible; solicitud conservada.")
             raise
-        except PaymentRejected:
+        except PaymentRejected as exc:
             # Unknown results/configuration errors require reconciliation, not a new charge.
             self.store.update_queued(payment_id, status=PaymentStatus.REVIEW,
-                                     error="Stripe rechazo la solicitud. Requiere revision.")
+                                     error=str(exc))
             return
         self.store.update_queued(payment_id, status=PaymentStatus.READY,
                                  provider_session_id=session_id, checkout_url=url, error=None)

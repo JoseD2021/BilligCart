@@ -10,7 +10,7 @@ async def run_event_worker(
     Ejecuta el consumidor de eventos de un servicio.
 
     Cada servicio aporta su registro de handlers; la conexión,
-    el consumo, los ACK y la DLQ son responsabilidad compartida.
+    el consumo, los ACK, los reintentos diferidos y la DLQ son responsabilidad compartida.
     """
     event_bus = RabbitMQEventBus()
 

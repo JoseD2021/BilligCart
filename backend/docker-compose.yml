@@ -11,8 +11,8 @@ services:
     - "traefik.http.routers.backend.middlewares=api-strip"
     - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
     volumes:
-      - .:/app,z
-      - payment-journal:/payment-data,z
+      - .:/app
+      - payment-journal:/payment-data
     env_file:
       - .env
     environment:
@@ -35,7 +35,7 @@ services:
       - -m
       - src.infrastructure.messaging.ai_worker
     volumes:
-      - .:/app,z
+      - .:/app
     env_file:
       - .env
     environment:
@@ -57,9 +57,12 @@ services:
       - -m
       - src.events.run_ai_events_worker
     volumes:
-      - .:/app,z
+      - .:/app
+      - payment-journal:/payment-data
     env_file:
       - .env
+    environment:
+      PAYMENTS_JOURNAL_PATH: /payment-data/journal.sqlite3
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -71,7 +74,7 @@ services:
     build: .
     command: ["python", "-m", "src.infrastructure.payments.worker"]
     volumes:
-      - .:/app,z
+      - .:/app
       - payment-journal:/payment-data
     env_file: .env
     environment:
@@ -80,6 +83,31 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - internal_network
+
+  # Desarrollo local: recibe las confirmaciones de Stripe sin login manual.
+  stripe_cli:
+    image: stripe/stripe-cli:v1.55.14
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        case "$${STRIPE_API_KEY}" in
+          sk_test_?*) ;;
+          *) echo "Configura STRIPE_SECRET_KEY con una clave sk_test_ en backend/.env." >&2; exit 1 ;;
+        esac
+        exec stripe listen \
+          --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed \
+          --forward-to http://backend:8000/v1/pagos/webhook/stripe
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_DEVICE_NAME: billigcart-docker
+    volumes:
+      - stripe-cli-config:/root/.config/stripe
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - internal_network
 
@@ -122,14 +150,6 @@ services:
       - internal_network
 
     # Configuracion para GPU
-    
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
   ollama-init:
     image: curlimages/curl:latest
@@ -243,3 +263,4 @@ volumes:
   ollama:
   rabbitmq-data:
   payment-journal:
+  stripe-cli-config:
