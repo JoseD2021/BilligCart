@@ -23,6 +23,7 @@ from src.domain.entities.user import User
 from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.errors import (
     AccessDenied,
+    InvalidOrderState,
     InvalidRequestBodyError,
     MenuGenerationError,
     OrderNotReady,
@@ -228,6 +229,49 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         })), prefs, orders)
         with self.assertRaises(OrderNotReady):
             await incompleta.confirm(USER.id, omitir_sin_precio=True)
+
+    async def test_confirm_only_includes_selected_products(self):
+        def ingrediente(id, nombre, precio):
+            return {"id": id, "nombre": nombre, "cantidad": 100, "unidad": "g", "tienda": "Éxito",
+                    "precio": precio, "ultimo_fetch": None}
+
+        dias = [{"comidas": {comida: {"ingredientes": [
+            ingrediente(1, "Arroz", 4000), ingrediente(2, "Leche", 3000), ingrediente(3, "Sal", None)]}
+            for comida in ("desayuno", "almuerzo", "cena")}} for _ in range(7)]
+        weekly = SimpleNamespace(execute=AsyncMock(return_value={"id": 1, "dias": dias}))
+        prefs = SimpleNamespace(get=AsyncMock(return_value=Preferencias(USER.id)))
+        orders = SimpleNamespace(create=AsyncMock(side_effect=lambda order: order))
+        shopping = ShoppingUseCase(weekly, prefs, orders)
+        ids = {item.ingrediente_id: item.id for item in (await shopping.get_list(USER.id)).items}
+
+        order = await shopping.confirm(USER.id, items_ids=[ids[2]])
+        self.assertEqual([item.ingrediente_id for item in order.items], [2])
+        self.assertEqual(order.total, 3000)
+        both = await shopping.confirm(USER.id, items_ids=[ids[1], ids[2]])
+        self.assertEqual(both.total, 7000)
+        self.assertNotEqual(order.checkout_key, both.checkout_key)
+
+        with self.assertRaises(OrderNotReady):
+            await shopping.confirm(USER.id, items_ids=[])
+        with self.assertRaises(OrderNotReady):
+            await shopping.confirm(USER.id, items_ids=[ids[3]])  # sin precio
+        with self.assertRaises(InvalidRequestBodyError):
+            await shopping.confirm(USER.id, items_ids=["999:g"])  # ya no está en la lista
+
+    async def test_delivery_is_saved_only_for_existing_undelivered_orders(self):
+        envio = {"direccion": "Calle 100 # 15-20", "referencia": None, "lat": None, "lng": None}
+        orders = SimpleNamespace(get_by_id=AsyncMock(return_value=SimpleNamespace(estado="pendiente")),
+                                 set_envio=AsyncMock(return_value="guardado"))
+        shopping = ShoppingUseCase(None, None, orders)
+        self.assertEqual(await shopping.set_delivery(USER.id, "order", envio), "guardado")
+        orders.set_envio.assert_awaited_once_with(USER.id, "order", envio)
+
+        orders.get_by_id = AsyncMock(return_value=None)
+        with self.assertRaises(ResourceNotFound):
+            await shopping.set_delivery(USER.id, "order", envio)
+        orders.get_by_id = AsyncMock(return_value=SimpleNamespace(estado="entregado"))
+        with self.assertRaises(InvalidOrderState):
+            await shopping.set_delivery(USER.id, "order", envio)
 
     async def test_compatible_units_are_combined(self):
         def ingredient(amount, unit):

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.domain.enums.role import UserRole
 from src.domain.errors import AccessDenied
@@ -20,6 +20,25 @@ class EstadoPedidoRequest(BaseModel):
 class ConfirmarCompraRequest(BaseModel):
     # El usuario acepta explícitamente dejar fuera los ingredientes sin precio.
     omitir_sin_precio: bool = False
+    # Ids (ShoppingItem.id) de los productos que el usuario marcó para comprar.
+    # Si no se envía, se incluye toda la lista.
+    items_ids: list[str] | None = None
+
+
+class EnvioRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    direccion: str = Field(min_length=1, max_length=300)
+    referencia: str | None = Field(default=None, max_length=300)
+    # El mapa/GPS completa lat y lng; siempre vienen los dos o ninguno.
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def coordenadas_completas(self):
+        if (self.lat is None) != (self.lng is None):
+            raise ValueError("lat y lng deben enviarse juntos")
+        return self
 
 
 def require_courier(user):
@@ -36,18 +55,24 @@ async def shopping_list(user=Depends(get_current_user), use_case=Depends(get_sho
 @router.post("/compras/confirmar", status_code=201)
 async def confirm(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case),
                   body: ConfirmarCompraRequest | None = None):
-    return await use_case.confirm(user.id, body.omitir_sin_precio if body else False)
+    omitir = body.omitir_sin_precio if body else False
+    if body and body.items_ids is not None:
+        return await use_case.confirm(user.id, omitir, items_ids=body.items_ids)
+    return await use_case.confirm(user.id, omitir)
 
 
 @router.get("/pedidos/current")
 async def current_order(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
     return await use_case.current_order(user.id)
 
-
 @router.get("/pedidos")
 async def list_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
     return await use_case.list_orders(user.id)
 
+@router.put("/pedidos/{pedido_id}/envio")
+async def set_delivery(pedido_id: UUID, body: EnvioRequest, user=Depends(get_current_user),
+                       use_case=Depends(get_shopping_use_case)):
+    return await use_case.set_delivery(user.id, str(pedido_id), body.model_dump())
 
 @router.get("/pedidos/{pedido_id}/estado")
 async def order(pedido_id: UUID, user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):

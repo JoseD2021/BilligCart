@@ -11,12 +11,19 @@ import { getListaCompras, confirmarCompra } from "../services/comprasService";
 import { idsParaActualizar } from "../services/ingredientesService";
 import { api } from "../services/api";
 
-const PASOS = ["Productos", "Total", "Pago", "Envío"];
+const PASOS = ["Productos", "Total", "Dirección", "Pago"];
 const pesos = (n) => `$${Number(n).toLocaleString("es-CO")}`;
+
+// Misma regla que el backend: un único precio de referencia por ingrediente,
+// aunque aparezca en varias filas (unidades distintas).
+function totalDe(items) {
+  const precios = new Map(items.map((item) => [item.ingrediente_id, item.precio]));
+  return Math.round([...precios.values()].reduce((suma, precio) => suma + (precio ?? 0), 0) * 100) / 100;
+}
 
 export default function CarritoScreen({ navigation, route }) {
   const returnOrderId = route?.params?.paymentOrderId;
-  const [paso, setPaso] = useState(returnOrderId ? 2 : 0);
+  const [paso, setPaso] = useState(returnOrderId ? 3 : 0);
   const [lista, setLista] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -24,7 +31,7 @@ export default function CarritoScreen({ navigation, route }) {
   const [confirmando, setConfirmando] = useState(false);
   const [actualizando, setActualizando] = useState(false);
   const [avisoPrecios, setAvisoPrecios] = useState(null);
-  const [omitirSinPrecio, setOmitirSinPrecio] = useState(false);
+  const [deseleccionados, setDeseleccionados] = useState(() => new Set()); // ids que el usuario desmarcó
   const [envio, setEnvio] = useState({ direccion: "", referencia: "", lat: null, lng: null });
 
   // Productos y precios: salen de /compras. El servicio consulta precios viejos
@@ -34,7 +41,6 @@ export default function CarritoScreen({ navigation, route }) {
     setCargando(true);
     setError(null);
     setAvisoPrecios(null);
-    setOmitirSinPrecio(false);
     getListaCompras({
       refrescar,
       onLista: (datos) => {
@@ -67,7 +73,7 @@ export default function CarritoScreen({ navigation, route }) {
   useEffect(() => {
     if (!returnOrderId) return;
     let active = true;
-    setPaso(2);
+    setPaso(3);
     setPedido(null);
     api.getEstadoPedido(returnOrderId)
       .then((value) => { if (active) setPedido(value); })
@@ -75,38 +81,71 @@ export default function CarritoScreen({ navigation, route }) {
     return () => { active = false; };
   }, [returnOrderId]);
 
-  async function confirmar() {
+  function alternar(item) {
+    setDeseleccionados((previo) => {
+      const siguiente = new Set(previo);
+      if (siguiente.has(item.id)) siguiente.delete(item.id);
+      else siguiente.add(item.id);
+      return siguiente;
+    });
+  }
+
+  function alternarTodos() {
+    const todosMarcados = seleccionados.length === conPrecio.length;
+    setDeseleccionados(todosMarcados ? new Set(conPrecio.map((item) => item.id)) : new Set());
+  }
+
+  // Paso Dirección -> Pago: crea el pedido con los productos marcados, le guarda la dirección
+  // y recién ahí pasa al pago. Si se repite con la misma selección, el backend devuelve el mismo pedido.
+  async function confirmarDireccion() {
     if (confirmando) return;
+    if (!envio.direccion.trim()) {
+      Alert.alert("Falta la dirección", "Escribe la dirección de entrega para continuar.");
+      return;
+    }
     setConfirmando(true);
     try {
-      setPedido(await confirmarCompra({ omitirSinPrecio })); // crea el pedido; Stripe cobra sobre ese pedido
-      setPaso(2);
+      const creado = await confirmarCompra({ itemsIds: seleccionados.map((item) => item.id) });
+      // lat/lng los completa el mapa/GPS; mientras tanto viajan en null.
+      await api.guardarEnvio(creado.id, {
+        direccion: envio.direccion.trim(),
+        referencia: envio.referencia?.trim() || null,
+        lat: envio.lat ?? null,
+        lng: envio.lng ?? null,
+      });
+      setPedido(creado);
+      setPaso(3);
     } catch (e) {
-      Alert.alert("No se pudo confirmar", e.message);
+      Alert.alert("No se pudo continuar", e.message);
     } finally {
       setConfirmando(false);
     }
   }
 
-  function finalizar() {
-    if (!envio.direccion.trim() && envio.lat == null) {
-      Alert.alert("Falta la dirección", "Escribe la dirección de entrega para continuar.");
-      return;
-    }
-    // TODO: guardar `envio` (direccion, referencia, lat, lng) en el pedido cuando exista el endpoint.
+  // Pago exitoso: limpia el carrito y abre el seguimiento del pedido (envío).
+  function irAlPedido() {
     const pedidoId = pedido.id;
     setPaso(0);
     setPedido(null);
     setEnvio({ direccion: "", referencia: "", lat: null, lng: null });
+    setDeseleccionados(new Set());
     navigation.setParams({ paymentOrderId: undefined });
     navigation.navigate("Pedido", { screen: "Pedidos", params: { pedidoId } });
   }
 
-  if ((cargando && !lista && paso < 2) || (paso === 2 && !pedido)) {
+  // Selección de productos: solo se pueden marcar los que tienen precio.
+  const itemsLista = lista?.items ?? [];
+  const conPrecio = itemsLista.filter((item) => item.precio != null);
+  const itemsSinPrecio = itemsLista.filter((item) => item.precio == null);
+  const seleccionados = conPrecio.filter((item) => !deseleccionados.has(item.id));
+  const noIncluidos = itemsLista.filter((item) => !seleccionados.includes(item));
+  const totalSeleccion = totalDe(seleccionados);
+
+  if ((cargando && !lista && paso < 3) || (paso === 3 && !pedido)) {
     return <View style={styles.centrado}><ActivityIndicator color={colors.primary} size="large" /></View>;
   }
 
-  if ((error || !lista?.items?.length) && paso < 2) {
+  if ((error || !lista?.items?.length) && paso < 3) {
     return (
       <View style={styles.centrado}>
         <Text style={[typography.body, { textAlign: "center", paddingHorizontal: spacing.lg }]}>
@@ -119,12 +158,9 @@ export default function CarritoScreen({ navigation, route }) {
     );
   }
 
-  const excedePresupuesto = (lista?.presupuesto ?? 0) > 0 && lista.total > lista.presupuesto;
+  const excedePresupuesto = (lista?.presupuesto ?? 0) > 0 && totalSeleccion > lista.presupuesto;
   const hayPreciosPorActualizar = lista ? idsParaActualizar(lista).length > 0 : false;
-  const itemsSinPrecio = (lista?.items ?? []).filter((item) => item.precio == null);
-  const puedeConfirmar = lista?.puede_confirmar
-    || (lista?.menu_completo && omitirSinPrecio && itemsSinPrecio.length > 0
-        && itemsSinPrecio.length < lista.items.length);
+  const puedeConfirmar = !!lista?.menu_completo && seleccionados.length > 0;
 
   return (
     <View style={styles.screen}>
@@ -146,6 +182,11 @@ export default function CarritoScreen({ navigation, route }) {
       {paso === 0 && (
         <>
           <View style={styles.accionesProductos}>
+            <TouchableOpacity onPress={alternarTodos} disabled={conPrecio.length === 0}>
+              <Text style={styles.link}>
+                {seleccionados.length === conPrecio.length ? "Quitar todos" : "Seleccionar todos"}
+              </Text>
+            </TouchableOpacity>
             {lista.precios_pendientes > 0 && (
               <Text style={styles.avisoTexto}>Faltan precios para {lista.precios_pendientes} ingredientes.</Text>
             )}
@@ -168,19 +209,32 @@ export default function CarritoScreen({ navigation, route }) {
             data={lista.items}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: spacing.lg }}
-            renderItem={({ item }) => (
-              <View style={styles.fila}>
-                <View style={{ flex: 1 }}>
-                  <Text style={typography.body}>{item.nombre}</Text>
-                  <Text style={typography.bodyMuted}>{item.cantidad} {item.unidad} · {item.supermercado ?? "Sin cotizar"}</Text>
-                </View>
-                <Text style={typography.price}>{item.precio == null ? "Pendiente" : pesos(item.precio)}</Text>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const sinPrecio = item.precio == null;
+              const marcado = !sinPrecio && !deseleccionados.has(item.id);
+              return (
+                <TouchableOpacity
+                  style={[styles.fila, !marcado && styles.filaApagada]}
+                  onPress={() => alternar(item)}
+                  disabled={sinPrecio}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkCaja, styles.checkProducto, marcado && styles.checkActivo]}>
+                    {marcado && <Text style={styles.checkMarca}>✓</Text>}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={typography.body}>{item.nombre}</Text>
+                    <Text style={typography.bodyMuted}>{item.cantidad} {item.unidad} · {item.supermercado ?? "Sin cotizar"}</Text>
+                  </View>
+                  <Text style={typography.price}>{sinPrecio ? "Sin precio" : pesos(item.precio)}</Text>
+                </TouchableOpacity>
+              );
+            }}
           />
           <Footer
-            etiqueta={`${lista.items.length} productos · ${pesos(lista.total)}`}
+            etiqueta={`${seleccionados.length} de ${conPrecio.length} productos · ${pesos(totalSeleccion)}`}
             boton="Ver total"
+            deshabilitado={seleccionados.length === 0}
             onPress={() => setPaso(1)}
           />
         </>
@@ -193,73 +247,65 @@ export default function CarritoScreen({ navigation, route }) {
             <Card>
               <Text style={typography.label}>TOTAL DE REFERENCIA</Text>
               <Text style={[typography.price, { fontSize: 28, marginTop: spacing.xs }, excedePresupuesto && { color: colors.warning }]}>
-                {pesos(lista.total)}
+                {pesos(totalSeleccion)}
               </Text>
               <Text style={[typography.bodyMuted, { marginTop: spacing.xs }]}>
                 Presupuesto: {lista.presupuesto ? pesos(lista.presupuesto) : "Sin definir"}
               </Text>
               {excedePresupuesto && (
                 <View style={styles.avisoPresupuesto}>
-                  <Text style={styles.avisoTexto}>Te pasaste del presupuesto por {pesos(lista.total - lista.presupuesto)}</Text>
+                  <Text style={styles.avisoTexto}>Te pasaste del presupuesto por {pesos(totalSeleccion - lista.presupuesto)}</Text>
                 </View>
               )}
             </Card>
             <Text style={typography.bodyMuted}>
               Precios de referencia de los productos encontrados. El costo final depende de la presentación y la cantidad comprada.
             </Text>
-            {itemsSinPrecio.length > 0 && (
+            {noIncluidos.length > 0 && (
               <View style={styles.avisoIngredientes}>
-                <Text style={styles.avisoTexto}>Faltan precios para estos ingredientes:</Text>
-                {itemsSinPrecio.map((item) => (
+                <Text style={styles.avisoTexto}>No se incluirán estos productos:</Text>
+                {noIncluidos.map((item) => (
                   <Text key={item.id} style={typography.bodyMuted}>
-                    • {item.nombre} — {item.cantidad} {item.unidad}
+                    • {item.nombre} — {item.cantidad} {item.unidad}{item.precio == null ? " (sin precio)" : ""}
                   </Text>
                 ))}
-                {itemsSinPrecio.length < lista.items.length ? (
-                  <TouchableOpacity onPress={() => setOmitirSinPrecio((valor) => !valor)} style={styles.opcionFila}>
-                    <View style={[styles.checkCaja, omitirSinPrecio && styles.checkActivo]}>
-                      {omitirSinPrecio && <Text style={styles.checkMarca}>✓</Text>}
-                    </View>
-                    <Text style={typography.body}>No incluirlos y pagar solo los demás ingredientes</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={styles.avisoTexto}>No hay ingredientes con precio para confirmar.</Text>
-                )}
-                {!lista.menu_completo && (
-                  <Text style={styles.avisoTexto}>Completa el menú semanal para poder confirmar.</Text>
-                )}
-                {lista.menu_completo && omitirSinPrecio && (
-                  <Text style={typography.bodyMuted}>El pedido y el total excluirán los ingredientes listados.</Text>
-                )}
               </View>
+            )}
+            {!lista.menu_completo && (
+              <Text style={styles.avisoTexto}>Completa el menú semanal para poder confirmar.</Text>
             )}
           </ScrollView>
           <Footer
-            boton={confirmando ? "Confirmando..." : (omitirSinPrecio && itemsSinPrecio.length
-              ? "Confirmar y pagar sin estos ingredientes" : "Confirmar y pagar")}
-            deshabilitado={!puedeConfirmar || confirmando}
-            onPress={confirmar}
+            etiqueta={`${seleccionados.length} productos · ${pesos(totalSeleccion)}`}
+            boton="Continuar"
+            deshabilitado={!puedeConfirmar}
+            onPress={() => setPaso(2)}
             atras={() => setPaso(0)}
           />
         </>
       )}
 
-      {/* ---------- 3. PAGO (Stripe Checkout, el PaymentPanel del proyecto) ---------- */}
-      {paso === 2 && pedido && (
-        <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-          <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
-          <PaymentPanel orderId={pedido.id} onSucceeded={() => setPaso(3)} />
-        </ScrollView>
-      )}
-
-      {/* ---------- 4. ENVÍO ---------- */}
-      {paso === 3 && (
+      {/* ---------- 3. DIRECCIÓN (se guarda en el pedido; el mapa/GPS se conecta en SelectorUbicacion) ---------- */}
+      {paso === 2 && (
         <>
           <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
             <SelectorUbicacion value={envio} onChange={setEnvio} />
           </ScrollView>
-          <Footer boton="Confirmar envío" onPress={finalizar} />
+          <Footer
+            boton={confirmando ? "Guardando..." : "Confirmar dirección y pagar"}
+            deshabilitado={confirmando}
+            onPress={confirmarDireccion}
+            atras={() => setPaso(1)}
+          />
         </>
+      )}
+
+      {/* ---------- 4. PAGO (Stripe Checkout, el PaymentPanel del proyecto) ---------- */}
+      {paso === 3 && pedido && (
+        <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+          <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
+          <PaymentPanel orderId={pedido.id} autoStart onSucceeded={irAlPedido} />
+        </ScrollView>
       )}
     </View>
   );
@@ -309,6 +355,9 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   checkActivo: { backgroundColor: colors.primary },
+  checkProducto: { marginRight: spacing.md },
+  filaApagada: { opacity: 0.55 },
+  link: { color: colors.primary, fontWeight: "600", fontSize: 14, marginTop: spacing.sm },
   checkMarca: { color: colors.white, fontWeight: "700", fontSize: 13 },
   avisoTexto: { color: colors.warning, fontSize: 13, fontWeight: "600", marginTop: spacing.sm },
   accionesProductos: { paddingHorizontal: spacing.lg },

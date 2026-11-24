@@ -18,6 +18,7 @@ class SupabasePedidoRepository(PedidoRepository):
         payload = asdict(pedido)
         payload.pop("created_at")
         payload.pop("ubicacion", None)
+        payload.pop("envio", None)  # va en direccion_dest/lat_dest/lng_dest/referencias, con set_envio
         await self.client.table("Pedidos").upsert(
             payload, on_conflict="user_id,checkout_key", ignore_duplicates=True,
         ).execute()
@@ -99,6 +100,17 @@ class SupabasePedidoRepository(PedidoRepository):
         rows = await self._with_ubicaciones(result.data or [])
         return self._entity(rows[0]) if rows else None
 
+    async def set_envio(self, user_id: str, pedido_id: str, envio: dict) -> Pedido | None:
+        columnas = {
+            "direccion_dest": envio.get("direccion"),
+            "referencias": envio.get("referencia"),
+            "lat_dest": envio.get("lat"),
+            "lng_dest": envio.get("lng"),
+        }
+        await self.client.table("Pedidos").update(columnas).eq("id", str(pedido_id)).eq(
+            "user_id", user_id).execute()
+        return await self.get_by_id(user_id, pedido_id)
+
     async def update_estado(self, pedido_id: str, repartidor_id: str, estado: str) -> Pedido | None:
         await self.client.table("Pedidos").update({"estado": estado}).eq("id", str(pedido_id)).eq(
             "repartidor_id", repartidor_id).execute()
@@ -122,6 +134,14 @@ class SupabasePedidoRepository(PedidoRepository):
                 "accuracy": ubicacion.get("accuracy"), "heading": ubicacion.get("heading"),
                 "speed": ubicacion.get("speed"),
             }
+        envio_data = None
+        if row.get("direccion_dest"):
+            lat, lng = row.get("lat_dest"), row.get("lng_dest")
+            envio_data = {
+                "direccion": row["direccion_dest"], "referencia": row.get("referencias"),
+                "lat": float(lat) if lat is not None else None,
+                "lng": float(lng) if lng is not None else None,
+            }
         menu_id = row.get("menu_id")
         return Pedido(
             id=str(row["id"]), user_id=str(row["user_id"]), menu_id=int(menu_id) if menu_id is not None else 0,
@@ -131,4 +151,5 @@ class SupabasePedidoRepository(PedidoRepository):
             repartidor_id=str(row["repartidor_id"]) if row.get("repartidor_id") else None,
             repartidor=row.get("repartidor"),
             created_at=timestamp(row.get("created_at")), ubicacion=ubicacion_data,
+            envio=envio_data,
         )

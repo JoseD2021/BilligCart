@@ -36,6 +36,26 @@ export default function PedidoScreen({ route }) {
   }, [pedidoId]);
   useFocusEffect(cargar);
 
+  // Actualización automática del estado (reemplaza al botón "Actualizar estado").
+  // Es silenciosa: no muestra el spinner ni borra la pantalla si una consulta falla.
+  const estadoActual = useRef(null);
+  estadoActual.current = pedido?.estado;
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    const refrescar = () => {
+      if (estadoActual.current === "entregado") return; // ya no cambia
+      const request = pedidoId ? api.getEstadoPedido(pedidoId) : api.getPedidoActual();
+      request
+        .then((data) => {
+          // Solo re-renderiza si algo cambió.
+          if (active) setPedido((previo) => (JSON.stringify(previo) === JSON.stringify(data) ? previo : data));
+        })
+        .catch(() => {}); // error transitorio: se conserva lo último que se vio
+    };
+    const timer = setInterval(refrescar, 5000);
+    return () => { active = false; clearInterval(timer); };
+  }, [pedidoId]));
+
   useEffect(() => () => { wsRef.current?.close(); }, []);
   useEffect(() => {
     if (!tracking || !pedido?.id) return;
@@ -86,7 +106,6 @@ export default function PedidoScreen({ route }) {
       {tracking && <TrackingMap location={location || pedido.ubicacion} courierOnline={courierOnline} />}
       <Text style={typography.bodyMuted}>Referencia: {pedido.id}</Text>
       <PaymentPanel orderId={pedido.id} />
-      <TouchableOpacity onPress={cargar}><Text style={styles.textoActivo}>Actualizar estado</Text></TouchableOpacity>
     </ScrollView>
   );
 }
