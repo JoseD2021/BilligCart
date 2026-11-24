@@ -78,6 +78,7 @@ class ApiTests(unittest.TestCase):
             ("GET", "/menu/weekly", None), ("POST", "/menu/generate", None),
             ("GET", "/preferencias", None), ("GET", "/compras", None), ("GET", "/pedidos/current", None),
             ("POST", "/compras/confirmar", None),
+            ("PUT", "/pedidos/6f0f6c1e-1b1a-4a3e-9d6a-3f1e2b4c5d6e/envio", {"direccion": "Calle 1"}),
         ]
         for method, route, body in routes:
             with self.subTest(method=method, route=route):
@@ -173,6 +174,30 @@ class ApiTests(unittest.TestCase):
         response = self.client.post("/v1/compras/confirmar", headers=self.headers)
         self.assertEqual(response.status_code, 201, response.text)
         use_case.confirm.assert_awaited_with(USER.id, False)
+
+    def test_confirm_passes_selected_product_ids(self):
+        use_case = SimpleNamespace(confirm=AsyncMock(return_value={"id": "order-1"}))
+        self.app.dependency_overrides[deps.get_shopping_use_case] = self.override(use_case)
+
+        response = self.client.post("/v1/compras/confirmar", json={"items_ids": ["1:g", "2:unidad"]},
+                                    headers=self.headers)
+        self.assertEqual(response.status_code, 201, response.text)
+        use_case.confirm.assert_awaited_with(USER.id, False, items_ids=["1:g", "2:unidad"])
+
+    def test_delivery_address_is_saved_for_the_authenticated_user(self):
+        use_case = SimpleNamespace(set_delivery=AsyncMock(return_value={"id": "order-1"}))
+        self.app.dependency_overrides[deps.get_shopping_use_case] = self.override(use_case)
+        url = "/v1/pedidos/6f0f6c1e-1b1a-4a3e-9d6a-3f1e2b4c5d6e/envio"
+
+        response = self.client.put(url, json={"direccion": "  Calle 100 # 15-20  ", "referencia": "Portería"},
+                                   headers=self.headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        use_case.set_delivery.assert_awaited_with(
+            USER.id, "6f0f6c1e-1b1a-4a3e-9d6a-3f1e2b4c5d6e",
+            {"direccion": "Calle 100 # 15-20", "referencia": "Portería", "lat": None, "lng": None})
+
+        self.assertEqual(self.client.put(url, json={"direccion": "   "}, headers=self.headers).status_code, 422)
+        self.assertEqual(self.client.put(url, json={"direccion": "Calle 1", "lat": 4.6}, headers=self.headers).status_code, 422)
 
     def test_preferences_use_authenticated_user_and_reject_user_id(self):
         response = self.client.put("/v1/preferencias", json={"restricciones": ["Sin gluten"], "presupuesto_semanal": 20000}, headers=self.headers)

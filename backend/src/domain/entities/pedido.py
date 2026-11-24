@@ -20,4 +20,8 @@ class Pedido:
     repartidor_id: str | None = None
     repartidor: str | None = None
     created_at: datetime | None = None
-    ubicacion: dict | None = None
+    ubicacion: dict | None = None  # posición en vivo del repartidor
+    # Dirección de entrega que escribe el cliente: {direccion, referencia, lat, lng}.
+    # En la base vive en Pedidos.direccion_dest / referencias / lat_dest / lng_dest.
+    # lat/lng quedan en None hasta que el mapa/GPS del cliente los complete.
+    envio: dict | None = None

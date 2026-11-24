@@ -101,8 +101,14 @@ export const api = {
   generarMenuSemanal: () => request("/menu/generate", { method: "POST" }),
   getListaDeCompras: () => request("/compras"),
   fetchIngrediente: (id) => request(`/ingrediente/fetch/${encodeURIComponent(id)}`, { method: "POST" }),
-  confirmarCompra: (omitirSinPrecio = false) => request("/compras/confirmar", {
-    method: "POST", body: JSON.stringify({ omitir_sin_precio: omitirSinPrecio }),
+  // itemsIds: ids de los productos marcados. Si es null se incluye toda la lista.
+  confirmarCompra: (omitirSinPrecio = false, itemsIds = null) => request("/compras/confirmar", {
+    method: "POST",
+    body: JSON.stringify({ omitir_sin_precio: omitirSinPrecio, ...(itemsIds ? { items_ids: itemsIds } : {}) }),
+  }),
+  // Guarda la dirección de entrega del pedido: { direccion, referencia, lat, lng }.
+  guardarEnvio: (pedidoId, envio) => request(`/pedidos/${encodeURIComponent(pedidoId)}/envio`, {
+    method: "PUT", body: JSON.stringify(envio),
   }),
   getPedidoActual: () => request("/pedidos/current"),
   getEstadoPedido: (id) => request(`/pedidos/${encodeURIComponent(id)}/estado`),
