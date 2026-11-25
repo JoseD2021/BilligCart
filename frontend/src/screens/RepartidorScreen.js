@@ -119,6 +119,12 @@ export default function RepartidorScreen() {
     <View style={styles.card}>
       <Text style={typography.h2}>Pedido {String(item.id).slice(0, 8)}</Text>
       <Text style={typography.bodyMuted}>Estado: {item.estado} · Total: ${Number(item.total).toLocaleString("es-CO")}</Text>
+      {item.pagado === false && (
+        <View style={styles.notaPago}>
+          <Text style={styles.notaPagoTitulo}>Pago pendiente</Text>
+          <Text style={styles.notaPagoTexto}>Este pedido aún no tiene el pago confirmado. Verifica el cobro antes de entregar.</Text>
+        </View>
+      )}
       {!assigned ? (
         <TouchableOpacity style={styles.btn} onPress={() => aceptar(item.id)}><Text style={styles.btnText}>Aceptar pedido</Text></TouchableOpacity>
       ) : (
@@ -150,6 +156,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background, padding: spacing.lg },
   centrado: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   card: { backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, marginVertical: spacing.xs, borderWidth: 1, borderColor: colors.border },
+  notaPago: { backgroundColor: "#FCEAE6", borderLeftWidth: 4, borderLeftColor: colors.warning, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  notaPagoTitulo: { color: colors.warning, fontSize: 13, fontWeight: "700" },
+  notaPagoTexto: { color: colors.warning, fontSize: 12, marginTop: 2 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: spacing.sm },
   btn: { backgroundColor: colors.primary, padding: spacing.sm, borderRadius: radius.sm, marginTop: spacing.sm, alignItems: "center" },
   btnText: { color: "#fff", fontWeight: "700" },

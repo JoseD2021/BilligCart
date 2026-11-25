@@ -1,3 +1,5 @@
+import logging
+from dataclasses import asdict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -8,7 +10,10 @@ from src.domain.errors import AccessDenied
 from src.infrastructure.api.v1.dependencies import (
     get_current_user,
     get_shopping_use_case,
+    get_supabase_client,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Compras y pedidos"])
 
@@ -47,6 +52,26 @@ def require_courier(user):
     return user
 
 
+async def pedidos_con_estado_pago(pedidos, client):
+    """Añade `pagado` a los pedidos del repartidor desde los Pagos confirmados.
+
+    `None` significa que no se pudo consultar el estado; el cliente no debe
+    mostrar la nota de pago pendiente en ese caso.
+    """
+    if not pedidos:
+        return []
+    ids = [str(p.id) for p in pedidos]
+    try:
+        result = await client.table("Pagos").select("order_id,status").in_(
+            "order_id", ids).eq("status", "succeeded").execute()
+        pagados = {str(row["order_id"]) for row in (result.data or [])
+                   if row.get("status") == "succeeded"}
+    except Exception:
+        logger.warning("No se pudo consultar el estado de pago de los pedidos del repartidor", exc_info=True)
+        return [asdict(p) | {"pagado": None} for p in pedidos]
+    return [asdict(p) | {"pagado": str(p.id) in pagados} for p in pedidos]
+
+
 @router.get("/compras")
 async def shopping_list(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
     return await use_case.get_list(user.id)
@@ -80,15 +105,19 @@ async def order(pedido_id: UUID, user=Depends(get_current_user), use_case=Depend
 
 
 @router.get("/repartidor/pedidos/disponibles")
-async def available_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
+async def available_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case),
+                           client=Depends(get_supabase_client)):
     require_courier(user)
-    return await use_case.available_for_courier()
+    pedidos = await use_case.available_for_courier()
+    return await pedidos_con_estado_pago(pedidos, client)
 
 
 @router.get("/repartidor/pedidos/asignados")
-async def assigned_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
+async def assigned_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case),
+                          client=Depends(get_supabase_client)):
     require_courier(user)
-    return await use_case.assigned_to_courier(user.id)
+    pedidos = await use_case.assigned_to_courier(user.id)
+    return await pedidos_con_estado_pago(pedidos, client)
 
 
 @router.post("/repartidor/pedidos/{pedido_id}/aceptar")
