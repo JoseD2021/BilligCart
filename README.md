@@ -231,3 +231,13 @@ El script `lint` ejecuta ESLint con la configuración de Expo. El comando de exp
 ### Nivel 1
 
 ![Nivel 1 c4 model](documentacion/c1.png)
+
+### Nivel 2
+
+![Nivel 2 c4 model](documentacion/c2.png)
+
+### Nivel 3
+
+![Nivel 3 AI](documentacion/C3%20ai%20worker.png)
+
+![Nivel 3 Events](documentacion/C3%20event%20worker.png)
