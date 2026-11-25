@@ -225,3 +225,9 @@ npx expo export --platform web --output-dir dist --max-workers 1
 ```
 
 El script `lint` ejecuta ESLint con la configuración de Expo. El comando de exportación genera la versión web mediante Metro.
+
+## C4 Models
+
+### Nivel 1
+
+![Nivel 1 c4 model](documentacion/c1.png)
