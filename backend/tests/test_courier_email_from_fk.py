@@ -2,7 +2,9 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from src.infrastructure.supabase.repositories.pedido_repository import SupabasePedidoRepository
+from src.infrastructure.supabase.repositories.pedido_repository import (
+    SupabasePedidoRepository,
+)
 
 
 def pedido_row(**overrides):
