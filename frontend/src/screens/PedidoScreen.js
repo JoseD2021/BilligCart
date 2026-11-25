@@ -86,7 +86,7 @@ export default function PedidoScreen({ route }) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={typography.h1}>Tu pedido</Text>
       <Text style={[typography.bodyMuted, { marginBottom: spacing.md }]}>
-        {pedido.repartidor ? `Repartidor: ${pedido.repartidor}` : "Repartidor pendiente de asignación"}
+        {pedido.repartidor_email ? `Repartidor: ${pedido.repartidor_email}` : "Repartidor pendiente de asignación"}
       </Text>
       <Card>
         {ESTADOS.map(({ clave, etiqueta }, i) => {

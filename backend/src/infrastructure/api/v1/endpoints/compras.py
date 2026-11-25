@@ -123,8 +123,7 @@ async def assigned_orders(user=Depends(get_current_user), use_case=Depends(get_s
 @router.post("/repartidor/pedidos/{pedido_id}/aceptar")
 async def accept_order(pedido_id: UUID, user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
     require_courier(user)
-    name = user.email.split("@")[0] if user.email else None
-    return await use_case.accept(user.id, str(pedido_id), name)
+    return await use_case.accept(user.id, str(pedido_id))
 
 
 @router.patch("/repartidor/pedidos/{pedido_id}/estado")
