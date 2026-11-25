@@ -110,6 +110,7 @@ export const api = {
   guardarEnvio: (pedidoId, envio) => request(`/pedidos/${encodeURIComponent(pedidoId)}/envio`, {
     method: "PUT", body: JSON.stringify(envio),
   }),
+  getPedidos: () => request("/pedidos"),
   getPedidoActual: () => request("/pedidos/current"),
   getEstadoPedido: (id) => request(`/pedidos/${encodeURIComponent(id)}/estado`),
   getMe: () => request("/auth/me"),

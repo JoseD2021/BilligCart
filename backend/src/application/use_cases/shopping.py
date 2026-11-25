@@ -103,6 +103,9 @@ class ShoppingUseCase:
     async def current_order(self, user_id: str):
         return await self.orders.get_current(user_id)
 
+    async def list_orders(self, user_id: str):
+        return await self.orders.list_for_user(user_id)
+
     async def order(self, user_id: str, order_id: str):
         order = await self.orders.get_by_id(user_id, order_id)
         if order is None:

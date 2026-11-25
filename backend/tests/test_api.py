@@ -76,7 +76,8 @@ class ApiTests(unittest.TestCase):
             ("GET", "/plato-ingrediente/get/1", None), ("GET", "/plato-ingrediente/get-by-plato/1", None),
             ("DELETE", "/plato-ingrediente/delete/1", None), ("DELETE", "/plato-ingrediente/delete-by-plato/1", None),
             ("GET", "/menu/weekly", None), ("POST", "/menu/generate", None),
-            ("GET", "/preferencias", None), ("GET", "/compras", None), ("GET", "/pedidos/current", None),
+            ("GET", "/preferencias", None), ("GET", "/compras", None), ("GET", "/pedidos", None),
+            ("GET", "/pedidos/current", None),
             ("POST", "/compras/confirmar", None),
             ("PUT", "/pedidos/6f0f6c1e-1b1a-4a3e-9d6a-3f1e2b4c5d6e/envio", {"direccion": "Calle 1"}),
         ]

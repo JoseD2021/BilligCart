@@ -65,12 +65,14 @@ async def confirm(user=Depends(get_current_user), use_case=Depends(get_shopping_
 async def current_order(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
     return await use_case.current_order(user.id)
 
+@router.get("/pedidos")
+async def list_orders(user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):
+    return await use_case.list_orders(user.id)
 
 @router.put("/pedidos/{pedido_id}/envio")
 async def set_delivery(pedido_id: UUID, body: EnvioRequest, user=Depends(get_current_user),
                        use_case=Depends(get_shopping_use_case)):
     return await use_case.set_delivery(user.id, str(pedido_id), body.model_dump())
-
 
 @router.get("/pedidos/{pedido_id}/estado")
 async def order(pedido_id: UUID, user=Depends(get_current_user), use_case=Depends(get_shopping_use_case)):

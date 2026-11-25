@@ -130,7 +130,7 @@ export default function CarritoScreen({ navigation, route }) {
     setEnvio({ direccion: "", referencia: "", lat: null, lng: null });
     setDeseleccionados(new Set());
     navigation.setParams({ paymentOrderId: undefined });
-    navigation.navigate("Pedido", { pedidoId });
+    navigation.navigate("Pedido", { screen: "Pedidos", params: { pedidoId } });
   }
 
   // Selección de productos: solo se pueden marcar los que tienen precio.

@@ -166,3 +166,11 @@ class RepositoryTests(unittest.IsolatedAsyncioTestCase):
         await SupabasePedidoRepository(client).get_by_id("user", "order")
         query.eq.assert_any_call("user_id", "user")
         query.eq.assert_any_call("id", "order")
+
+    async def test_order_list_filters_owner_and_returns_all_orders(self):
+        row = {"id": "order", "user_id": "user", "menu_id": 1, "checkout_key": "key", "items": [], "total": 5000, "estado": "pendiente"}
+        client, query = database(row)
+        result = await SupabasePedidoRepository(client).list_for_user("user")
+        self.assertEqual([order.id for order in result], ["order"])
+        query.eq.assert_any_call("user_id", "user")
+        query.order.assert_called_with("created_at", desc=True)

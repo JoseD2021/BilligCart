@@ -73,7 +73,7 @@ export default function ListaComprasScreen({ navigation }) {
     setConfirmando(true);
     try {
       const pedido = await confirmarCompra();
-      navigation.navigate("Pedido", { pedidoId: pedido.id });
+      navigation.navigate("Pedido", { screen: "Pedidos", params: { pedidoId: pedido.id } });
     } catch (e) {
       Alert.alert("No se pudo confirmar", e.message);
     } finally {
