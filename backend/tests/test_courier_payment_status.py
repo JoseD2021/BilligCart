@@ -6,8 +6,9 @@ from src.domain.entities.pedido import Pedido
 from src.infrastructure.api.v1.endpoints.compras import pedidos_con_estado_pago
 
 
-def pedido(order_id):
-    return Pedido(order_id, "user", 1, "key", [], 100, estado="pendiente")
+def pedido(order_id, direccion=None):
+    envio = {"direccion": direccion, "referencia": "Torre 2", "lat": None, "lng": None} if direccion else None
+    return Pedido(order_id, "user", 1, "key", [], 100, estado="pendiente", envio=envio)
 
 
 def client_con_pagos(rows=None, error=None):
@@ -28,9 +29,12 @@ class CourierPaymentStatusTests(unittest.IsolatedAsyncioTestCase):
             {"order_id": "pagado", "status": "succeeded"},
             {"order_id": "otro", "status": "succeeded"},
         ])
-        result = await pedidos_con_estado_pago([pedido("pagado"), pedido("pendiente")], client)
+        result = await pedidos_con_estado_pago(
+            [pedido("pagado", "Calle 1"), pedido("pendiente")], client)
         self.assertEqual(result[0]["pagado"], True)
         self.assertEqual(result[1]["pagado"], False)
+        self.assertEqual(result[0]["envio"]["direccion"], "Calle 1")
+        self.assertEqual(result[0]["envio"]["referencia"], "Torre 2")
         self.assertEqual(query.in_.call_args.args, ("order_id", ["pagado", "pendiente"]))
 
     async def test_sin_pedidos_no_consulta_la_base(self):

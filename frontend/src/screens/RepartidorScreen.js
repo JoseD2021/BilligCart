@@ -119,6 +119,8 @@ export default function RepartidorScreen() {
     <View style={styles.card}>
       <Text style={typography.h2}>Pedido {String(item.id).slice(0, 8)}</Text>
       <Text style={typography.bodyMuted}>Estado: {item.estado} · Total: ${Number(item.total).toLocaleString("es-CO")}</Text>
+      <Text style={styles.direccion}>Dirección: {item.envio?.direccion || "El cliente aún no la ha indicado"}</Text>
+      {!!item.envio?.referencia && <Text style={typography.bodyMuted}>Referencia: {item.envio.referencia}</Text>}
       {item.pagado === false && (
         <View style={styles.notaPago}>
           <Text style={styles.notaPagoTitulo}>Pago pendiente</Text>
@@ -156,6 +158,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background, padding: spacing.lg },
   centrado: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   card: { backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, marginVertical: spacing.xs, borderWidth: 1, borderColor: colors.border },
+  direccion: { color: colors.primary, fontSize: 13, fontWeight: "600", marginTop: spacing.xs },
   notaPago: { backgroundColor: "#FCEAE6", borderLeftWidth: 4, borderLeftColor: colors.warning, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   notaPagoTitulo: { color: colors.warning, fontSize: 13, fontWeight: "700" },
   notaPagoTexto: { color: colors.warning, fontSize: 12, marginTop: 2 },
