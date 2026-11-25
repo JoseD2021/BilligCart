@@ -18,10 +18,11 @@ class Pedido:
     total: float
     estado: str = "pendiente"
     repartidor_id: str | None = None
-    repartidor: str | None = None
     created_at: datetime | None = None
     ubicacion: dict | None = None  # posición en vivo del repartidor
     # Dirección de entrega que escribe el cliente: {direccion, referencia, lat, lng}.
     # En la base vive en Pedidos.direccion_dest / referencias / lat_dest / lng_dest.
     # lat/lng quedan en None hasta que el mapa/GPS del cliente los complete.
     envio: dict | None = None
+    # Resuelto desde auth.users a través de repartidor_id; no se lee de Pedidos.repartidor.
+    repartidor_email: str | None = None

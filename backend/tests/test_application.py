@@ -191,7 +191,7 @@ class ApplicationTests(unittest.IsolatedAsyncioTestCase):
         order = await shopping.confirm(USER.id)
         self.assertEqual(order.user_id, USER.id)
         self.assertEqual(order.estado, "pendiente")
-        self.assertIsNone(order.repartidor)
+        self.assertIsNone(order.repartidor_id)
         self.assertEqual(order.total, 5000)
         second = await shopping.confirm(USER.id)
         self.assertEqual(order.checkout_key, second.checkout_key)

@@ -118,8 +118,8 @@ class ShoppingUseCase:
     async def assigned_to_courier(self, courier_id: str):
         return await self.orders.list_assigned(courier_id)
 
-    async def accept(self, courier_id: str, order_id: str, courier_name: str | None = None):
-        order = await self.orders.assign(order_id, courier_id, courier_name)
+    async def accept(self, courier_id: str, order_id: str):
+        order = await self.orders.assign(order_id, courier_id)
         if order is None:
             raise ResourceNotFound("Pedido no encontrado.")
         if order.repartidor_id != courier_id:

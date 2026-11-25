@@ -90,8 +90,8 @@ export default function PedidosScreen({ navigation, route }) {
           <Text style={typography.price}>{formatearTotal(item.total)}</Text>
           <Text style={typography.bodyMuted}>{item.items?.length ?? 0} productos</Text>
         </View>
-        {item.repartidor ? (
-          <Text style={[typography.bodyMuted, styles.repartidor]}>Repartidor: {item.repartidor}</Text>
+        {item.repartidor_email ? (
+          <Text style={[typography.bodyMuted, styles.repartidor]}>Repartidor: {item.repartidor_email}</Text>
         ) : null}
         {destacado ? <Text style={styles.nuevo}>Pedido recién creado</Text> : null}
       </TouchableOpacity>

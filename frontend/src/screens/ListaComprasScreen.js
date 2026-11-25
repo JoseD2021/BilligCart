@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import Alerta from "../components/Alerta";
 import { colors, spacing, radius, typography } from "../theme/theme";
 import { getListaCompras, confirmarCompra } from "../services/comprasService";
 import { DIAS_PARA_ACTUALIZAR, idsParaActualizar } from "../services/ingredientesService";
@@ -12,6 +13,7 @@ export default function ListaComprasScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [avisoPrecios, setAvisoPrecios] = useState(null);
   const [confirmando, setConfirmando] = useState(false);
+  const [alerta, setAlerta] = useState(null);
 
   const cargar = useCallback(({ refrescar = true } = {}) => {
     let active = true;
@@ -75,7 +77,7 @@ export default function ListaComprasScreen({ navigation }) {
       const pedido = await confirmarCompra();
       navigation.navigate("Pedido", { screen: "Pedidos", params: { pedidoId: pedido.id } });
     } catch (e) {
-      Alert.alert("No se pudo confirmar", e.message);
+      setAlerta({ titulo: "No se pudo confirmar", mensaje: e.message });
     } finally {
       setConfirmando(false);
     }
@@ -85,6 +87,7 @@ export default function ListaComprasScreen({ navigation }) {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={typography.h1}>Lista de compras</Text>
+        <Alerta {...alerta} onCerrar={() => setAlerta(null)} />
         <View style={styles.resumen}>
           <View>
             <Text style={typography.label}>TOTAL DE REFERENCIA</Text>

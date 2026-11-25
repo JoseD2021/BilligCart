@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
+  View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import Alerta from "../components/Alerta";
 import Card from "../components/Card";
 import PaymentPanel from "../components/PaymentPanel";
 import SelectorUbicacion from "../components/SelectorUbicacion";
@@ -31,6 +32,7 @@ export default function CarritoScreen({ navigation, route }) {
   const [confirmando, setConfirmando] = useState(false);
   const [actualizando, setActualizando] = useState(false);
   const [avisoPrecios, setAvisoPrecios] = useState(null);
+  const [alerta, setAlerta] = useState(null);
   const [deseleccionados, setDeseleccionados] = useState(() => new Set()); // ids que el usuario desmarcó
   const [envio, setEnvio] = useState({ direccion: "", referencia: "", lat: null, lng: null });
 
@@ -100,13 +102,13 @@ export default function CarritoScreen({ navigation, route }) {
   async function confirmarDireccion() {
     if (confirmando) return;
     if (!envio.direccion.trim()) {
-      Alert.alert("Falta la dirección", "Escribe la dirección de entrega para continuar.");
+      setAlerta({ titulo: "Falta la dirección", mensaje: "Escribe la dirección de entrega para continuar." });
       return;
     }
     setConfirmando(true);
     try {
       const creado = await confirmarCompra({ itemsIds: seleccionados.map((item) => item.id) });
-      // lat/lng los completa el mapa/GPS; mientras tanto viajan en null.
+      // lat/lng los completa el mapa al ubicar la dirección; si no, viajan en null.
       await api.guardarEnvio(creado.id, {
         direccion: envio.direccion.trim(),
         referencia: envio.referencia?.trim() || null,
@@ -116,7 +118,7 @@ export default function CarritoScreen({ navigation, route }) {
       setPedido(creado);
       setPaso(3);
     } catch (e) {
-      Alert.alert("No se pudo continuar", e.message);
+      setAlerta({ titulo: "No se pudo continuar", mensaje: e.message });
     } finally {
       setConfirmando(false);
     }
@@ -128,6 +130,7 @@ export default function CarritoScreen({ navigation, route }) {
     setPaso(0);
     setPedido(null);
     setEnvio({ direccion: "", referencia: "", lat: null, lng: null });
+    setAlerta(null);
     setDeseleccionados(new Set());
     navigation.setParams({ paymentOrderId: undefined });
     navigation.navigate("Pedido", { screen: "Pedidos", params: { pedidoId } });
@@ -289,6 +292,7 @@ export default function CarritoScreen({ navigation, route }) {
       {paso === 2 && (
         <>
           <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+            <Alerta {...alerta} onCerrar={() => setAlerta(null)} />
             <SelectorUbicacion value={envio} onChange={setEnvio} />
           </ScrollView>
           <Footer

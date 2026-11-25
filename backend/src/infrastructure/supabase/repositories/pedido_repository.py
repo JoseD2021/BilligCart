@@ -1,3 +1,4 @@
+import logging
 from dataclasses import asdict
 
 from supabase import AsyncClient
@@ -9,6 +10,8 @@ from src.infrastructure.supabase.repositories.mappers import timestamp
 
 SELECT = "*"
 
+logger = logging.getLogger(__name__)
+
 
 class SupabasePedidoRepository(PedidoRepository):
     def __init__(self, client: AsyncClient):
@@ -19,6 +22,7 @@ class SupabasePedidoRepository(PedidoRepository):
         payload.pop("created_at")
         payload.pop("ubicacion", None)
         payload.pop("envio", None)  # va en direccion_dest/lat_dest/lng_dest/referencias, con set_envio
+        payload.pop("repartidor_email", None)  # derivado de auth.users, no columna de Pedidos
         await self.client.table("Pedidos").upsert(
             payload, on_conflict="user_id,checkout_key", ignore_duplicates=True,
         ).execute()
@@ -41,21 +45,45 @@ class SupabasePedidoRepository(PedidoRepository):
             row["ubicacion"] = by_id.get(rid)
         return rows
 
+    async def _with_repartidor_email(self, rows: list[dict]) -> list[dict]:
+        """Resuelve el email del repartidor desde auth.users usando repartidor_id.
+
+        La columna texto `repartidor` queda como dato heredado y no se usa aquí.
+        Si Auth no responde, se deja el email en None en lugar de inventarlo.
+        """
+        ids = {str(row["repartidor_id"]) for row in rows if row.get("repartidor_id")}
+        if not ids:
+            return rows
+        emails = {}
+        for uid in ids:
+            try:
+                res = await self.client.auth.admin.get_user_by_id(uid)
+                user = getattr(res, "user", None)
+                email = getattr(user, "email", None)
+                if email:
+                    emails[uid] = email
+            except Exception:
+                logger.warning("No se pudo resolver el email del repartidor %s", uid, exc_info=True)
+        for row in rows:
+            rid = str(row["repartidor_id"]) if row.get("repartidor_id") else None
+            row["repartidor_email"] = emails.get(rid)
+        return rows
+
     async def get_current(self, user_id: str) -> Pedido | None:
         result = await self.client.table("Pedidos").select(SELECT).eq("user_id", user_id).order(
             "created_at", desc=True).limit(1).execute()
-        rows = await self._with_ubicaciones(result.data or [])
+        rows = await self._with_repartidor_email(await self._with_ubicaciones(result.data or []))
         return self._entity(rows[0]) if rows else None
 
     async def list_for_user(self, user_id: str) -> list[Pedido]:
         result = await self.client.table("Pedidos").select(SELECT).eq("user_id", user_id).order(
             "created_at", desc=True).execute()
-        rows = await self._with_ubicaciones(result.data or [])
+        rows = await self._with_repartidor_email(await self._with_ubicaciones(result.data or []))
         return [self._entity(row) for row in rows]
 
     async def get_by_id(self, user_id: str, pedido_id: str) -> Pedido | None:
         result = await self.client.table("Pedidos").select(SELECT).eq("user_id", user_id).eq("id", str(pedido_id)).execute()
-        rows = await self._with_ubicaciones(result.data or [])
+        rows = await self._with_repartidor_email(await self._with_ubicaciones(result.data or []))
         return self._entity(rows[0]) if rows else None
 
     async def list_available(self) -> list[Pedido]:
@@ -76,7 +104,7 @@ class SupabasePedidoRepository(PedidoRepository):
         rows = await self._with_ubicaciones(result.data or [])
         return self._entity(rows[0]) if rows else None
 
-    async def assign(self, pedido_id: str, repartidor_id: str, repartidor: str | None = None) -> Pedido | None:
+    async def assign(self, pedido_id: str, repartidor_id: str) -> Pedido | None:
         existing = await self.client.table("Pedidos").select(SELECT).eq("id", str(pedido_id)).execute()
         if not existing.data:
             return None
@@ -88,8 +116,6 @@ class SupabasePedidoRepository(PedidoRepository):
             rows = await self._with_ubicaciones([row])
             return self._entity(rows[0])
         payload = {"repartidor_id": repartidor_id, "estado": "confirmado"}
-        if repartidor:
-            payload["repartidor"] = repartidor
         query = self.client.table("Pedidos").update(payload).eq("id", str(pedido_id)).in_("estado", ["pendiente", "confirmado"])
         if not row.get("repartidor_id"):
             query = query.is_("repartidor_id", "null")
@@ -149,7 +175,6 @@ class SupabasePedidoRepository(PedidoRepository):
             items=[ShoppingItem(**item) for item in row.get("items", []) or []],
             total=float(row.get("total", 0) or 0), estado=estado,
             repartidor_id=str(row["repartidor_id"]) if row.get("repartidor_id") else None,
-            repartidor=row.get("repartidor"),
             created_at=timestamp(row.get("created_at")), ubicacion=ubicacion_data,
-            envio=envio_data,
+            envio=envio_data, repartidor_email=row.get("repartidor_email"),
         )

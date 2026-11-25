@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as Location from "expo-location";
+import Alerta from "../components/Alerta";
 import { api, WS_BASE_URL, getAuthToken } from "../services/api";
 import { colors, radius, spacing, typography } from "../theme/theme";
 
@@ -12,6 +13,7 @@ export default function RepartidorScreen() {
   const [cargando, setCargando] = useState(true);
   const [activo, setActivo] = useState(null);
   const [modo, setModo] = useState("idle");
+  const [alerta, setAlerta] = useState(null);
   const wsRef = useRef(null);
   const watchRef = useRef(null);
   const nativeWatchRef = useRef(null);
@@ -25,7 +27,7 @@ export default function RepartidorScreen() {
         if (actual && a.some((pedido) => pedido.id === actual)) return actual;
         return a.length ? a[a.length - 1].id : null;
       });
-    } catch (e) { Alert.alert("Error", e.message); }
+    } catch (e) { setAlerta({ titulo: "Error", mensaje: e.message }); }
     finally { setCargando(false); }
   }, []);
 
@@ -67,7 +69,7 @@ export default function RepartidorScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (!vivo) return;
         if (status !== "granted") {
-          Alert.alert("Ubicación", "Activa el permiso de ubicación para Expo Go y vuelve a entrar.");
+          setAlerta({ titulo: "Ubicación", mensaje: "Activa el permiso de ubicación para Expo Go y vuelve a entrar." });
           return;
         }
         if (nativeWatchRef.current) nativeWatchRef.current.remove();
@@ -76,7 +78,7 @@ export default function RepartidorScreen() {
           sendLocation
         );
       } catch {
-        Alert.alert("Ubicación", "No se pudo iniciar el GPS del dispositivo.");
+        setAlerta({ titulo: "Ubicación", mensaje: "No se pudo iniciar el GPS del dispositivo." });
       }
     };
 
@@ -105,10 +107,10 @@ export default function RepartidorScreen() {
   }, [activo]);
 
   async function aceptar(id) {
-    try { await api.aceptarPedido(id); setActivo(id); await cargar(); } catch (e) { Alert.alert("No se pudo aceptar", e.message); }
+    try { await api.aceptarPedido(id); setActivo(id); await cargar(); } catch (e) { setAlerta({ titulo: "No se pudo aceptar", mensaje: e.message }); }
   }
   async function cambiarEstado(id, estado) {
-    try { await api.actualizarEstadoPedido(id, estado); await cargar(); } catch (e) { Alert.alert("No se pudo actualizar", e.message); }
+    try { await api.actualizarEstadoPedido(id, estado); await cargar(); } catch (e) { setAlerta({ titulo: "No se pudo actualizar", mensaje: e.message }); }
   }
 
   if (cargando) return <View style={styles.centrado}><ActivityIndicator color={colors.primary} size="large" /></View>;
@@ -117,6 +119,14 @@ export default function RepartidorScreen() {
     <View style={styles.card}>
       <Text style={typography.h2}>Pedido {String(item.id).slice(0, 8)}</Text>
       <Text style={typography.bodyMuted}>Estado: {item.estado} · Total: ${Number(item.total).toLocaleString("es-CO")}</Text>
+      <Text style={styles.direccion}>Dirección: {item.envio?.direccion || "El cliente aún no la ha indicado"}</Text>
+      {!!item.envio?.referencia && <Text style={typography.bodyMuted}>Referencia: {item.envio.referencia}</Text>}
+      {item.pagado === false && (
+        <View style={styles.notaPago}>
+          <Text style={styles.notaPagoTitulo}>Pago pendiente</Text>
+          <Text style={styles.notaPagoTexto}>Este pedido aún no tiene el pago confirmado. Verifica el cobro antes de entregar.</Text>
+        </View>
+      )}
       {!assigned ? (
         <TouchableOpacity style={styles.btn} onPress={() => aceptar(item.id)}><Text style={styles.btnText}>Aceptar pedido</Text></TouchableOpacity>
       ) : (
@@ -134,6 +144,7 @@ export default function RepartidorScreen() {
   return (
     <View style={styles.screen}>
       <Text style={typography.h1}>Modo repartidor</Text>
+      <Alerta {...alerta} onCerrar={() => setAlerta(null)} />
       <Text style={[typography.bodyMuted, { marginBottom: spacing.sm }]}>GPS automático: {activo ? String(activo).slice(0, 8) : "ninguno"} · modo {modo}</Text>
       <Text style={typography.h2}>Disponibles</Text>
       <FlatList data={disponibles} keyExtractor={(i) => String(i.id)} renderItem={({ item }) => <Pedido item={item} />} ListEmptyComponent={<Text style={typography.bodyMuted}>No hay pedidos pendientes.</Text>} />
@@ -147,6 +158,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background, padding: spacing.lg },
   centrado: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   card: { backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, marginVertical: spacing.xs, borderWidth: 1, borderColor: colors.border },
+  direccion: { color: colors.primary, fontSize: 13, fontWeight: "600", marginTop: spacing.xs },
+  notaPago: { backgroundColor: "#FCEAE6", borderLeftWidth: 4, borderLeftColor: colors.warning, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  notaPagoTitulo: { color: colors.warning, fontSize: 13, fontWeight: "700" },
+  notaPagoTexto: { color: colors.warning, fontSize: 12, marginTop: 2 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: spacing.sm },
   btn: { backgroundColor: colors.primary, padding: spacing.sm, borderRadius: radius.sm, marginTop: spacing.sm, alignItems: "center" },
   btnText: { color: "#fff", fontWeight: "700" },
