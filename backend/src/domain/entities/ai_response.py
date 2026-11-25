@@ -1,27 +1,31 @@
-from pydantic import BaseModel, Field
+from __future__ import annotations
 
-class ingredientsSchema(BaseModel):
-    name: str = Field(..., description="Nombre del ingrediente") 
-    cantidad: float = Field(..., description="Cantidad de ingrediente necesaria por unidad")
-    unit: str = Field(..., description="Unidad de medida") 
+from dataclasses import dataclass
+from math import isfinite
 
-class ComidaSchema(BaseModel):
-    name: str = Field(..., description="Nombre de la comida")
-    ingredients: list[ingredientsSchema] = Field(..., description="Ingredientes")
+from src.domain.enums.plato_tipo import PlatoTipo
+from src.domain.errors import MenuGenerationError
 
-class DiaSchema(BaseModel):
-    desayuno: ComidaSchema = Field(..., description="desayuno")
-    almuerzo: ComidaSchema = Field(..., description="almuerzo")
-    cena: ComidaSchema = Field(..., description="cena")
 
-class menu(BaseModel):
-    lunes: DiaSchema = Field(...,description="Comidas del lunes")
-    martes: DiaSchema = Field(...,description="Comidas del martes")
-    miercoles: DiaSchema = Field(...,description="Comidas del miercoles")
-    jueves: DiaSchema = Field(...,description="Comidas del jueves")
-    viernes: DiaSchema = Field(...,description="Comidas del viernes")
-    sabado: DiaSchema = Field(...,description="Comidas del sabado")
-    domingo: DiaSchema = Field(...,description="Comidas del domingo")
+@dataclass(frozen=True)
+class GeneratedIngredient:
+    clave: str
+    nombre: str
+    cantidad: float
+    unidad: str
 
-class AIResponseSchema(BaseModel):
-    menuSemanal: menu = Field(..., description="Menu semanal")
+    def __post_init__(self):
+        if not self.nombre.strip() or not self.unidad.strip() or not isfinite(self.cantidad) or self.cantidad <= 0:
+            raise MenuGenerationError("La IA devolvió un ingrediente con nombre, unidad o cantidad inválidos.")
+
+
+@dataclass(frozen=True)
+class GeneratedDish:
+    day: int
+    tipo: PlatoTipo
+    nombre: str
+    ingredientes: list[GeneratedIngredient]
+
+    def __post_init__(self):
+        if not self.nombre.strip() or not self.ingredientes:
+            raise MenuGenerationError("Cada comida debe tener nombre e ingredientes.")

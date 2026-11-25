@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class CreatePlatoIngredienteBody(BaseModel):
     quantity: float
     unit: str

@@ -1,9 +1,9 @@
 import inspect
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from src.events.contracts.base_event import BaseEvent
 from src.events.contracts.event_envelope import EventEnvelope
-
 
 EventHandler = Callable[[BaseEvent], Any]
 

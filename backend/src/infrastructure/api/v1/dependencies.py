@@ -1,48 +1,85 @@
 from fastapi import Depends, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import AsyncClient
 
-from src.infrastructure.scrapers.scraper_exito import ScraperExito
-from src.infrastructure.http.httpx_fetcher import HttpxFetcher
-from src.application.commands.ingrediente.scrape_ingrediente import ScrapeIngredienteHandler
-from src.application.interfaces.fetcher import Fetcher
-from src.application.interfaces.auth_service import AuthService
 from src.application.commands.auth.login_user import LoginUserHandler
 from src.application.commands.auth.register_user import RegisterUserHandler
+from src.application.commands.ingrediente.create_ingrediente import (
+    CreateIngredientHandler,
+)
+from src.application.commands.ingrediente.delete_ingrediente_by_id import (
+    DeleteIngredientHandler,
+)
+from src.application.commands.ingrediente.scrape_ingrediente import (
+    ScrapeIngredienteHandler,
+)
+from src.application.commands.ingrediente.update_fetch_ingrediente import (
+    UpdateFetchIngredientHandler,
+)
+from src.application.commands.ingrediente.update_ingrediente import (
+    UpdateIngredientHandler,
+)
 from src.application.commands.menu.create_menu import CreateMenuHandler
+from src.application.commands.plato.create_plato import CreatePlatoHandler
+from src.application.commands.plato.delete_plato_by_id import DeletePlatoHandler
+from src.application.commands.plato.update_plato import UpdatePlatoHandler
+from src.application.commands.plato_ingrediente.create_many_plato_ingrediente import (
+    CreateManyPlatoIngredienteCommandHandler,
+)
+from src.application.commands.plato_ingrediente.create_plato_ingrediente import (
+    CreatePlatoIngredienteCommandHandler,
+)
+from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_id import (
+    DeletePlatoIngredienteHandler,
+)
+from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import (
+    DeletePlatoIngredienteByPlatoIdHandler,
+)
+from src.application.commands.plato_ingrediente.update_plato_ingrediente import (
+    UpdatePlatoIngredienteCommandHandler,
+)
+from src.application.interfaces.auth_service import AuthService
+from src.application.queries.ingrediente.get_ingrediente_by_id import (
+    GetIngredientByIdHandler,
+)
 from src.application.queries.menu.get_current_menu import GetCurrentMenuHandler
 from src.application.queries.menu.get_menu_by_date import GetMenuByDateHandler
-from src.application.commands.plato.create_plato import CreatePlatoHandler
-from src.application.commands.plato.update_plato import UpdatePlatoHandler
 from src.application.queries.plato.get_plato_by_day import GetPlatoByDayHandler
-from src.application.commands.plato.delete_plato_by_id import DeletePlatoHandler
-from src.application.commands.ingrediente.create_ingrediente import CreateIngredientHandler
-from src.application.commands.ingrediente.delete_ingrediente_by_id import DeleteIngredientHandler
-from src.application.commands.ingrediente.update_ingrediente import UpdateIngredientHandler
-from src.application.commands.ingrediente.update_fetch_ingrediente import UpdateFetchIngredientHandler
-from src.application.queries.ingrediente.get_ingrediente_by_id import GetIngredientByIdHandler
-from src.application.commands.plato_ingrediente.create_many_plato_ingrediente import CreateManyPlatoIngredienteCommandHandler
-from src.application.commands.plato_ingrediente.update_plato_ingrediente import UpdatePlatoIngredienteCommandHandler
-from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_id import DeletePlatoIngredienteHandler
-from src.application.commands.plato_ingrediente.delete_plato_ingrediente_by_platoid import DeletePlatoIngredienteByPlatoIdHandler
-from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import GetPlatoIngredienteByPlatoIdHandler
-from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_id import GetPlatoIngredienteByIdHandler
-from src.domain.repositories.plato_ingrediente_repository import PlatoIngredienteRepository
-from src.infrastructure.supabase.repositories.plato_ingrediente_repository import SupabasePlatoIngredienteRepository
-from src.application.commands.plato_ingrediente.create_plato_ingrediente import CreatePlatoIngredienteCommandHandler
-from src.domain.repositories.ingrediente_repository import IngredienteRepository
-from src.infrastructure.supabase.repositories.plato_repository import SupabasePlatoRepository
-from src.domain.repositories.plato_repository import PlatoRepository
-from src.domain.repositories.menu_repository import MenuRepository
-from src.infrastructure.supabase.repositories.menu_repository import SupabaseMenuRepository
-from src.domain.repositories.preferencias_repository import PreferenciasRepository
-from src.infrastructure.supabase.repositories.preferencias_repository import SupabasePreferenciasRepository
-from src.infrastructure.supabase.repositories.ingrediente_repository import SupabaseIngredienteRepository
-from src.infrastructure.supabase.auth_service import SupabaseAuthService
-from src.domain.errors import InvalidCredentials
+from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_id import (
+    GetPlatoIngredienteByIdHandler,
+)
+from src.application.queries.plato_ingrediente.get_plato_ingrediente_by_platoid import (
+    GetPlatoIngredienteByPlatoIdHandler,
+)
 from src.domain.entities.user import User
+from src.domain.errors import InvalidCredentials
+from src.domain.repositories.ingrediente_repository import IngredienteRepository
+from src.domain.repositories.menu_repository import MenuRepository
+from src.domain.repositories.plato_ingrediente_repository import (
+    PlatoIngredienteRepository,
+)
+from src.domain.repositories.plato_repository import PlatoRepository
+from src.domain.repositories.preferencias_repository import PreferenciasRepository
+from src.infrastructure.http.httpx_fetcher import HttpxFetcher
+from src.infrastructure.scrapers.scraper_exito import ScraperExito
+from src.infrastructure.supabase.auth_service import SupabaseAuthService
+from src.infrastructure.supabase.repositories.ingrediente_repository import (
+    SupabaseIngredienteRepository,
+)
+from src.infrastructure.supabase.repositories.menu_repository import (
+    SupabaseMenuRepository,
+)
+from src.infrastructure.supabase.repositories.plato_ingrediente_repository import (
+    SupabasePlatoIngredienteRepository,
+)
+from src.infrastructure.supabase.repositories.plato_repository import (
+    SupabasePlatoRepository,
+)
+from src.infrastructure.supabase.repositories.preferencias_repository import (
+    SupabasePreferenciasRepository,
+)
 
-bearer = HTTPBearer()
+bearer = HTTPBearer(auto_error=False)
 
 # ------- Supabase -------------
 # Separado para que los repositorios se puedan construir también fuera de
@@ -54,17 +91,22 @@ def get_supabase_client(request: Request) -> AsyncClient:
 # ------- Auth / User -------------
 
 def get_auth_service(request: Request) -> AuthService:
-    return SupabaseAuthService(request.app.state.supabase)
+    return SupabaseAuthService(
+        request.app.state.auth_supabase,
+        role_client=request.app.state.supabase,
+    )
 
 async def get_current_user(
-    creds: HTTPAuthorizationCredentials = Depends(bearer),
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer),
     auth: AuthService = Depends(get_auth_service),
 ) -> User:
+    if creds is None:
+        raise HTTPException(401, "Se requiere autenticación", headers={"WWW-Authenticate": "Bearer"})
     try:
         return await auth.get_user_from_token(creds.credentials)
     except InvalidCredentials:
-        raise HTTPException(401, "Token inválido")
-    
+        raise HTTPException(401, "Token inválido", headers={"WWW-Authenticate": "Bearer"})
+
 def get_preferencias_repository(
     request: Request
 ) -> PreferenciasRepository:
@@ -149,9 +191,13 @@ def get_update_fetch_ingredient_handler(
 ) -> UpdateFetchIngredientHandler:
     return UpdateFetchIngredientHandler(ingr)
 
-def get_fetcher() -> Fetcher:
-    return HttpxFetcher()
-    
+async def get_fetcher():
+    fetcher = HttpxFetcher()
+    try:
+        yield fetcher
+    finally:
+        await fetcher.aclose()
+
 
 def get_scraper_builders() -> list:
     from src.infrastructure.scrapers.scraper_olimpica import ScraperOlimpica
@@ -201,20 +247,70 @@ def get_update_plato_ingrediente_handler(
 
 def get_delete_plato_ingrediente_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "DeletePlatoIngredienteHandler":
+) -> DeletePlatoIngredienteHandler:
     return DeletePlatoIngredienteHandler(pltingr)
 
 def get_delete_plato_ingrediente_by_plato_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "DeletePlatoIngredienteByPlatoIdHandler":
+) -> DeletePlatoIngredienteByPlatoIdHandler:
     return DeletePlatoIngredienteByPlatoIdHandler(pltingr)
 
 def get_get_plato_ingrediente_by_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "GetPlatoIngredienteByIdHandler":
+) -> GetPlatoIngredienteByIdHandler:
     return GetPlatoIngredienteByIdHandler(pltingr)
 
 def get_get_plato_ingrediente_by_plato_id_handler(
     pltingr: PlatoIngredienteRepository = Depends(get_plato_ingrediente_repository),
-) -> "GetPlatoIngredienteByPlatoIdHandler":
+) -> GetPlatoIngredienteByPlatoIdHandler:
     return GetPlatoIngredienteByPlatoIdHandler(pltingr)
+
+
+def get_access_policy(
+    menus=Depends(get_menu_repository), platos=Depends(get_plato_repository),
+    relaciones=Depends(get_plato_ingrediente_repository),
+):
+    from src.application.access_policy import AccessPolicy
+    return AccessPolicy(menus, platos, relaciones)
+
+
+def get_preferences_use_case(repository=Depends(get_preferencias_repository)):
+    from src.application.use_cases.preferences import PreferencesUseCase
+    return PreferencesUseCase(repository)
+
+
+def get_weekly_menu(
+    menus=Depends(get_menu_repository), platos=Depends(get_plato_repository),
+    ingredientes=Depends(get_ingrediente_repository), relaciones=Depends(get_plato_ingrediente_repository),
+):
+    from src.application.queries.menu.get_weekly_menu import GetWeeklyMenu
+    return GetWeeklyMenu(menus, platos, ingredientes, relaciones)
+
+
+def get_generate_weekly_menu(
+    preferences=Depends(get_preferences_use_case), weekly=Depends(get_weekly_menu),
+    menus=Depends(get_menu_repository), platos=Depends(get_plato_repository),
+    ingredientes=Depends(get_ingrediente_repository), relaciones=Depends(get_plato_ingrediente_repository),
+):
+    from src.application.use_cases.generate_weekly_menu import GenerateWeeklyMenu
+    from src.application.use_cases.persist_generated_menu import (
+        PersistGeneratedMenuUseCase,
+    )
+    from src.infrastructure.messaging.rabbitmq_ai_client import RabbitMQAIClient
+    return GenerateWeeklyMenu(preferences, RabbitMQAIClient(persist_via_events=False),
+                              PersistGeneratedMenuUseCase(menus, platos, ingredientes, relaciones), weekly)
+
+
+def get_pedido_repository(client: AsyncClient = Depends(get_supabase_client)):
+    from src.infrastructure.supabase.repositories.pedido_repository import (
+        SupabasePedidoRepository,
+    )
+    return SupabasePedidoRepository(client)
+
+
+def get_shopping_use_case(
+    weekly=Depends(get_weekly_menu), preferences=Depends(get_preferences_use_case),
+    orders=Depends(get_pedido_repository),
+):
+    from src.application.use_cases.shopping import ShoppingUseCase
+    return ShoppingUseCase(weekly, preferences, orders)

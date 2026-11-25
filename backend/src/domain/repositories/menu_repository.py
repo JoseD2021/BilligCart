@@ -3,6 +3,7 @@ from datetime import date
 
 from src.domain.entities.menu import Menu
 
+
 class MenuRepository(ABC):
     @abstractmethod
     async def get_current(self, user_id: str) -> Menu | None:
@@ -13,9 +14,9 @@ class MenuRepository(ABC):
         pass
 
     @abstractmethod
-    async def update(self, menu: Menu) -> Menu:
+    async def get_by_id(self, id: int) -> Menu | None:
         pass
-    
+
     @abstractmethod
     async def get_by_date(self, user_id: str, date: date) -> Menu | None:
         pass

@@ -2,10 +2,10 @@ import datetime
 import json
 from urllib.parse import quote
 
-from src.domain.entities.ingrediente import Ingrediente
-from src.domain.errors import ScrapingError
 from src.application.interfaces.scraper_builder import ScraperBuilder
+from src.domain.entities.ingrediente import Ingrediente
 from src.domain.enums.tienda import Tienda
+from src.domain.errors import ScrapingError
 
 
 class ScraperExito(ScraperBuilder):
@@ -32,8 +32,7 @@ class ScraperExito(ScraperBuilder):
 
         for producto in data:
             oferta = self._oferta_disponible(producto)
-            #print(f"oferta: {oferta}")
-            
+
             if oferta:
                 self._items.append((producto, oferta))
 
@@ -58,21 +57,18 @@ class ScraperExito(ScraperBuilder):
         if d.get("nombre") is None or d.get("precio") is None or d.get("url") is None:
             raise ScrapingError("Exito: producto incompleto (posible cambio de estructura en la pagina)", d)
         return Ingrediente(
-            name=d["nombre"], last_updated=datetime.datetime.now(datetime.timezone.utc),
+            name=d["nombre"], last_updated=datetime.datetime.now(datetime.UTC), last_fetched=None,
             price=d["precio"], shop=self.tienda, url=d["url"],
         )
 
     # --- helpers ---
     def _oferta_disponible(self, producto: dict) -> dict | None:
         for item in producto.get("items", []):
-            #print(f"item: {item}")
             for seller in item.get("sellers", []):
-                #print(f"seller: {seller}")
                 if seller.get("sellerId") != self._SELLER_PROPIO:
                     continue
                 oferta = seller.get("commertialOffer") or {}
                 if oferta.get("IsAvailable") and (oferta.get("Price") or 0) > 0:
-                    print(f"[EXITO] Oferta disponible: {producto['productName']} ${oferta['Price']} ({producto['link']})")
-                    
+
                     return oferta
         return None

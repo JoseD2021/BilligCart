@@ -1,0 +1,14 @@
+target-version = "py314"
+
+[lint.per-file-ignores]
+"src/infrastructure/payments/worker.py" = ["BLE001"]
+"src/events/infrastructure/rabbitmq_event_bus.py" = ["BLE001"]
+"src/infrastructure/supabase/repositories/pedido_repository.py" = ["BLE001"]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+]

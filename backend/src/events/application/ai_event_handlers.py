@@ -9,7 +9,6 @@ from src.events.contracts.ai_menu_events import (
     MenuGenerationStarted,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -33,6 +32,10 @@ async def on_menu_generation_completed(
         event.model,
         event.duration_ms,
     )
+
+    if not event.persist_via_events:
+        # La API espera y persiste antes de responder en /menu/generate.
+        return
 
     if not event.user_id or not event.response:
         logger.warning(

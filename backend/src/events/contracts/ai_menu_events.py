@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -24,6 +26,7 @@ class MenuGenerationCompleted(BaseEvent):
     # el dueño del menú y la respuesta cruda que devolvió la IA.
     user_id: str | None = None
     response: str | None = None
+    persist_via_events: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)

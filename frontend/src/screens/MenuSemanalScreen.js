@@ -28,7 +28,7 @@ export default function MenuSemanalScreen({ navigation }) {
     setProgreso("Preparando...");
     setGenerando(true);
     try {
-      const nuevo = await generarMenuSemanal(usuario.id, setProgreso);
+      const nuevo = await generarMenuSemanal(setProgreso);
       setMenu(nuevo);
       if (!nuevo) setErrorGeneracion("El menú se generó pero no pudimos leerlo. Intenta recargar.");
     } catch (e) {
@@ -46,7 +46,7 @@ export default function MenuSemanalScreen({ navigation }) {
     setCargando(true);
     setError(null);
     try {
-      setMenu(await getMenuSemanal(usuario.id));
+      setMenu(await getMenuSemanal());
     } catch (e) {
       console.warn("getMenuSemanal:", e.message);
       setError("No pudimos cargar tu menú. Revisa tu conexión e intenta de nuevo.");

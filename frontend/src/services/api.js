@@ -9,13 +9,16 @@ import { Platform } from "react-native";
 const BASE_URL =
   Platform.OS === "web"
     ? "/api/v1"
-    : process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+    : process.env.EXPO_PUBLIC_API_URL ?? "http://localhost/v1";
 
 // Token de sesión en memoria. AuthContext lo actualiza al iniciar/cerrar
 // sesión; cualquier llamada posterior a request() lo usa automáticamente.
 let authToken = null;
 export function setAuthToken(token) {
   authToken = token;
+}
+export function getAuthToken() {
+  return authToken;
 }
 
 // Mensajes en español para los errores de dominio que devuelve el backend:
@@ -25,6 +28,8 @@ const MENSAJES = {
   EmailAlreadyRegistered: "Ese correo ya tiene una cuenta.",
   InvalidEmail: "El correo no es válido.",
   WeakPassword: "La contraseña es muy débil (mínimo 6 caracteres).",
+  InvalidRole: "El rol seleccionado no es válido.",
+  AccessDenied: "No tienes permiso para realizar esta acción.",
   InvalidRequestBodyError: "Revisa los datos ingresados.",
   BackendUnavailable: "No se pudo conectar con el servidor. ¿Está encendido el backend?",
 };
@@ -51,10 +56,11 @@ async function leerError(res) {
   if (codigo && MENSAJES[codigo]) return new ApiError(res.status, codigo, MENSAJES[codigo]);
   // FastAPI devuelve { detail: [...] } cuando falla la validación del cuerpo (p. ej. correo mal escrito).
   if (res.status === 422) return new ApiError(res.status, "ValidationError", "Revisa los datos ingresados.");
-  // El endpoint /ai/generate responde 504 (IA tardó demasiado) o 503 (sin mensajería) con { detail }.
+  // La generación puede agotar el tiempo de espera o no tener mensajería disponible.
   if (res.status === 504) return new ApiError(res.status, "AITimeout", "La IA tardó demasiado en responder.");
-  if (res.status === 503) return new ApiError(res.status, "AIUnavailable", "El servicio de IA no está disponible.");
-  return new ApiError(res.status, codigo, "El servidor tuvo un problema. Intenta de nuevo.");
+  if (res.status === 503) return new ApiError(res.status, codigo ?? "ServiceUnavailable",
+    body?.message ?? (typeof body?.detail === "string" ? body.detail : "El servicio no está disponible. Intenta de nuevo."));
+  return new ApiError(res.status, codigo, body?.message ?? (typeof body?.detail === "string" ? body.detail : "El servidor tuvo un problema. Intenta de nuevo."));
 }
 
 async function request(path, options = {}) {
@@ -67,46 +73,51 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+function normalizeWsUrl(value) {
+  return value
+    .replace(/^http:/, "ws:")
+    .replace(/^https:/, "wss:")
+    .replace(/\/api\/v1\/?$/, "")
+    .replace(/\/v1\/?$/, "")
+    .replace(/\/$/, "");
+}
+
+export const WS_BASE_URL = process.env.EXPO_PUBLIC_WS_URL
+  ? normalizeWsUrl(process.env.EXPO_PUBLIC_WS_URL)
+  : Platform.OS === "web"
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.hostname}`
+    : normalizeWsUrl(process.env.EXPO_PUBLIC_API_URL ?? "http://localhost");
+
 export const api = {
-
-  login: (email, password) =>
-    request(`/auth/login`, { method: "POST", body: JSON.stringify({ email, password }) }),
-  registrar: ({ email, password }) =>
-    request(`/auth/register`, { method: "POST", body: JSON.stringify({ email, password }) }),
-
-
-  getPreferencias: (usuarioId) => request(`/usuarios/${usuarioId}/preferencias`),
-  guardarPreferencias: (usuarioId, data) =>
-    request(`/usuarios/${usuarioId}/preferencias`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-
-  // --- Menú semanal (generado por el servicio de Menú/Recetas) ---
-  getMenuSemanal: (usuarioId) => request(`/usuarios/${usuarioId}/menu-semanal`),
-
-  // --- Menú: endpoints reales del backend (los usa services/menuGenerador.js) ---
-  getMenuActual: () => request(`/menu/current`), // null si aún no hay menú de esta semana
-  crearMenu: () => request(`/menu/create`, { method: "POST" }), // OJO: no devuelve el id
-  generarConIA: (prompt) =>
-    request(`/ai/generate`, { method: "POST", body: JSON.stringify({ prompt }) }),
-  getPlatosPorDia: (menuId, dia) => request(`/plato/day/${dia}?menu_id=${menuId}`),
-  crearPlato: (plato) => request(`/plato/create`, { method: "POST", body: JSON.stringify(plato) }), // OJO: no devuelve el id
-  eliminarPlato: (id) => request(`/plato/delete/${id}`, { method: "DELETE" }),
-  crearIngrediente: (name) =>
-    request(`/ingrediente/create`, { method: "POST", body: JSON.stringify({ name }) }),
-  crearPlatoIngredientes: (lista) =>
-    request(`/plato-ingrediente/create-many`, { method: "POST", body: JSON.stringify(lista) }),
-  getIngredientesDePlato: (platoId) => request(`/plato-ingrediente/get-by-plato/${platoId}`),
-  getIngrediente: (id) => request(`/ingrediente/get/${id}`),
-  eliminarIngredientesDePlato: (platoId) =>
-    request(`/plato-ingrediente/delete-by-plato/${platoId}`, { method: "DELETE" }),
-
-
-  getListaDeCompras: (usuarioId) => request(`/usuarios/${usuarioId}/lista-compras`),
-  confirmarCompra: (usuarioId) =>
-    request(`/usuarios/${usuarioId}/lista-compras/confirmar`, { method: "POST" }),
-
- 
-  getEstadoPedido: (pedidoId) => request(`/pedidos/${pedidoId}/estado`),
+  register: (data) => request("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+  solicitarPago: (orderId, key) => request("/pagos", {
+    method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ order_id: orderId }),
+  }),
+  getPagoActual: (orderId) => request(`/pagos/pedido/${encodeURIComponent(orderId)}`),
+  getConfiguracionPagos: () => request("/pagos/configuracion"),
+  getPreferencias: () => request("/preferencias"),
+  guardarPreferencias: (data) => request("/preferencias", { method: "PUT", body: JSON.stringify(data) }),
+  getMenuSemanal: () => request("/menu/weekly"),
+  generarMenuSemanal: () => request("/menu/generate", { method: "POST" }),
+  getListaDeCompras: () => request("/compras"),
+  fetchIngrediente: (id) => request(`/ingrediente/fetch/${encodeURIComponent(id)}`, { method: "POST" }),
+  // itemsIds: ids de los productos marcados. Si es null se incluye toda la lista.
+  confirmarCompra: (omitirSinPrecio = false, itemsIds = null) => request("/compras/confirmar", {
+    method: "POST",
+    body: JSON.stringify({ omitir_sin_precio: omitirSinPrecio, ...(itemsIds ? { items_ids: itemsIds } : {}) }),
+  }),
+  // Guarda la dirección de entrega del pedido: { direccion, referencia, lat, lng }.
+  guardarEnvio: (pedidoId, envio) => request(`/pedidos/${encodeURIComponent(pedidoId)}/envio`, {
+    method: "PUT", body: JSON.stringify(envio),
+  }),
+  getPedidos: () => request("/pedidos"),
+  getPedidoActual: () => request("/pedidos/current"),
+  getEstadoPedido: (id) => request(`/pedidos/${encodeURIComponent(id)}/estado`),
+  getMe: () => request("/auth/me"),
+  getPedidosDisponibles: () => request("/repartidor/pedidos/disponibles"),
+  getPedidosAsignados: () => request("/repartidor/pedidos/asignados"),
+  aceptarPedido: (id) => request(`/repartidor/pedidos/${encodeURIComponent(id)}/aceptar`, { method: "POST" }),
+  actualizarEstadoPedido: (id, estado) => request(`/repartidor/pedidos/${encodeURIComponent(id)}/estado`, {
+    method: "PATCH", body: JSON.stringify({ estado }),
+  }),
 };

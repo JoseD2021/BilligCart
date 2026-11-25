@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 
+from src.domain.entities.plato import Plato
 from src.domain.enums.plato_tipo import PlatoTipo
 from src.domain.repositories.plato_repository import PlatoRepository
-from src.domain.entities.plato import Plato
+
 
 @dataclass(frozen=True)
 class UpdatePlatoCommand:
@@ -16,7 +17,7 @@ class UpdatePlatoCommand:
 class UpdatePlatoHandler:
     def __init__(self, plato: PlatoRepository):
         self._plato = plato
-        
+
     async def handle(self, cmd: UpdatePlatoCommand):
         plato = Plato(
             id=cmd.id,
@@ -26,6 +27,5 @@ class UpdatePlatoHandler:
             day=cmd.day,
             description=cmd.description or None,
         )
-        
-        await self._plato.update(plato)
-        return plato
+
+        return await self._plato.update(plato)

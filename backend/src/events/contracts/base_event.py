@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 from uuid import uuid4
 
@@ -18,7 +20,7 @@ class BaseEvent:
     )
 
     occurred_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )
 
     EVENT_TYPE: ClassVar[str] = ""
@@ -55,18 +57,18 @@ class BaseEvent:
         *,
         event_id: str,
         occurred_at: str,
-    ) -> "BaseEvent":
+    ) -> BaseEvent:
         """
         Reconstruye un evento a partir del mensaje recibido.
         Los eventos con campos complejos pueden sobrescribir
         este método para controlar su deserialización.
         """
         timestamp = datetime.fromisoformat(
-            occurred_at.replace("Z", "+00:00")
+            occurred_at
         )
 
         if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
+            timestamp = timestamp.replace(tzinfo=UTC)
 
         return cls(
             **payload,

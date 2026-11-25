@@ -1,10 +1,10 @@
-from uuid import UUID
 import datetime
 
 from supabase import AsyncClient
 
-from src.domain.repositories.menu_repository import MenuRepository
 from src.domain.entities.menu import Menu
+from src.domain.repositories.menu_repository import MenuRepository
+from src.infrastructure.supabase.repositories.mappers import menu_entity
 
 TABLE = "Menu"
 
@@ -17,14 +17,14 @@ class SupabaseMenuRepository(MenuRepository):
             await self._client.table(TABLE)
             .select("*")
             .eq("user_id", str(user_id))
-            .eq("week_start", Menu.default(user_id).week_start)  # Obtener el menú de la semana actual
+            .eq("week_start", Menu.default(user_id).week_start.isoformat())  # Obtener el menú de la semana actual
             .execute()
         )
-        
-        return self._to_entity(res.data[0]) if res and res.data else None
+
+        return menu_entity(res.data[0]) if res and res.data else None
 
     async def create(self, menu: Menu):
-        payload = {"user_id": str(menu.user_id), "week_start": menu.week_start}
+        payload = {"user_id": str(menu.user_id), "week_start": menu.week_start.isoformat()}
         # si ya tiene id (update), se incluye, si no, la db lo asigna
         if menu.id is not None:
             payload["id"] = menu.id
@@ -34,18 +34,18 @@ class SupabaseMenuRepository(MenuRepository):
             .upsert(payload, on_conflict="user_id")
             .execute()
         )
-        return self._to_entity(res.data[0])
+        return menu_entity(res.data[0])
 
-    async def update(self, user_id: str, menu_id: int, menu_data: dict):
-        # Lógica para actualizar el menú del usuario en Supabase
-        pass
-    
+    async def get_by_id(self, id: int) -> Menu | None:
+        res = await self._client.table(TABLE).select("*").eq("id", id).execute()
+        return menu_entity(res.data[0]) if res and res.data else None
+
     async def get_by_date(self, user_id: str, date: datetime.date) -> Menu | None:
         # calc lunes a las 00:00
         try:
             week_start = date - datetime.timedelta(days=date.weekday())
             week_start = week_start.strftime("%Y-%m-%d")
-            
+
             res = (
                 await self._client.table(TABLE)
                 .select("*")
@@ -53,10 +53,6 @@ class SupabaseMenuRepository(MenuRepository):
                 .eq("week_start", week_start)
                 .execute()
             )
-            return self._to_entity(res.data[0]) if res and res.data else None
+            return menu_entity(res.data[0]) if res and res.data else None
         except ValueError:
             return None
-    
-    @staticmethod
-    def _to_entity(row: dict) -> Menu:
-        return Menu(id=row["id"], user_id=UUID(row["user_id"]), week_start=row["week_start"], created_at=row["created_at"])

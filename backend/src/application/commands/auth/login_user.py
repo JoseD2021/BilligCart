@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from  src.application.interfaces.auth_service import AuthService, AuthSession
+from src.application.interfaces.auth_service import AuthService, AuthSession
+
 
 @dataclass(frozen=True)
 class LoginUserCommand:
@@ -13,5 +14,4 @@ class LoginUserHandler:
 
     async def handle(self, cmd: LoginUserCommand) -> AuthSession:
         user = await self._auth.sign_in(cmd.email, cmd.password)
-        # TODO: await self._events.publish(UserRegistered(user.id, user.email))
         return user

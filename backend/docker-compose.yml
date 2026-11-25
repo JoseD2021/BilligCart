@@ -1,17 +1,25 @@
 
 services:
   backend:
-    build:
-      context: .
+    build: .
     container_name: backend
-    ports:
-      - "8000:8000"
+    labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.backend.entrypoints=web"
+    - "traefik.http.routers.backend.rule=PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi`)"
+    - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    - "traefik.http.routers.backend.middlewares=api-strip"
+    - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
     volumes:
-      - .:/app,z
+      - .:/app:z
+      - payment-journal:/payment-data
     env_file:
       - .env
     environment:
       PORT: "8000"
+      PAYMENTS_JOURNAL_PATH: /payment-data/journal.sqlite3
+    ports:
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -20,15 +28,14 @@ services:
       - internal_network
 
   ai_worker:
-    build:
-      context: .
+    build: .
     container_name: ai_worker
     command:
       - python
       - -m
       - src.infrastructure.messaging.ai_worker
     volumes:
-      - .:/app,z
+      - .:/app:z
     env_file:
       - .env
     environment:
@@ -43,17 +50,19 @@ services:
       - internal_network
 
   event_worker:
-    build:
-      context: .
+    build: .
     container_name: event_worker
     command:
       - python
       - -m
       - src.events.run_ai_events_worker
     volumes:
-      - .:/app,z
+      - .:/app:z
+      - payment-journal:/payment-data
     env_file:
       - .env
+    environment:
+      PAYMENTS_JOURNAL_PATH: /payment-data/journal.sqlite3
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -61,11 +70,55 @@ services:
     networks:
       - internal_network
 
+  payment_worker:
+    build: .
+    command: ["python", "-m", "src.infrastructure.payments.worker"]
+    volumes:
+      - .:/app:z
+      - payment-journal:/payment-data
+    env_file: .env
+    environment:
+      PAYMENTS_JOURNAL_PATH: /payment-data/journal.sqlite3
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - internal_network
+
+  # Desarrollo local: recibe las confirmaciones de Stripe sin login manual.
+  stripe_cli:
+    image: stripe/stripe-cli:v1.55.14
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        case "$${STRIPE_API_KEY}" in
+          sk_test_?*) ;;
+          *) echo "Configura STRIPE_SECRET_KEY con una clave sk_test_ en backend/.env." >&2; exit 1 ;;
+        esac
+        exec stripe listen \
+          --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed \
+          --forward-to http://backend:8000/v1/pagos/webhook/stripe
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_DEVICE_NAME: billigcart-docker
+    volumes:
+      - stripe-cli-config:/root/.config/stripe
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - internal_network
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: billigcart-rabbitmq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    expose:
+      - "5672"
     ports:
-      - "5672:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Define RABBITMQ_USER en .env}
@@ -86,13 +139,16 @@ services:
   ollama:
     image: ollama/ollama
     container_name: ollama
+    restart: unless-stopped
     expose:
       - "11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: "-1"
     volumes:
       - ollama:/root/.ollama
     networks:
       - internal_network
-    
+
     # Configuracion para GPU
     deploy:
       resources:
@@ -123,13 +179,95 @@ services:
           -H "Content-Type: application/json" \
           -d "{\"name\":\"$${OLLAMA_MODEL}\"}"
         echo "Descarga finalizada."
+        echo "Precargando $${OLLAMA_MODEL} en memoria..."
+        curl --fail --show-error -sS \
+          -X POST http://ollama:11434/api/generate \
+          -H "Content-Type: application/json" \
+          -d "{\"model\":\"$${OLLAMA_MODEL}\",\"keep_alive\":-1}" >/dev/null
+        echo "Modelo precargado:"
+        curl -fsS http://ollama:11434/api/ps
     restart: "no"
     networks:
       - internal_network
+  traefik:
+    image: traefik:v3.7.16
+    container_name: traefik_proxy
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"   # aceptable solo si el puerto va a 127.0.0.1
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://socket-proxy:2375"
+      - "--entrypoints.web.address=:80"
+
+    ports:
+      - "80:80"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    read_only: true
+    networks:
+      - internal_network
+      - socket_network
+    depends_on:
+      - socket-proxy
+
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: socket_proxy
+    restart: unless-stopped
+    environment:
+      - CONTAINERS=1
+      - POST=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt:
+      - label:disable
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+    networks:
+      - socket_network
+
+  gps_service:
+    build: .
+    container_name: gps_service
+    command: >
+      uvicorn src.infrastructure.gps.app:app
+      --host 0.0.0.0 --port 8001
+      --ws-ping-interval 20 --ws-ping-timeout 20
+    restart: unless-stopped
+    env_file: .env   # RABBITMQ_URL, SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_JWT_SECRET
+    expose:
+      - "8001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal_network       # Traefik -> gps_service
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gps.rule=PathPrefix(`/ws`)"
+      - "traefik.http.routers.gps.entrypoints=web"
+      - "traefik.http.services.gps.loadbalancer.server.port=8001"
+      - "traefik.docker.network=internal_network"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
 networks:
   internal_network:
     driver: bridge
+  socket_network:
+    internal: true
 
 volumes:
   ollama:
+  rabbitmq-data:
+  payment-journal:
+  stripe-cli-config:

@@ -17,7 +17,7 @@ export default function PreferenciasScreen() {
   // Carga lo que el usuario ya guardó antes.
   useEffect(() => {
     if (!usuario?.id) return;
-    getPreferencias(usuario.id)
+    getPreferencias()
       .then((p) => {
         if (!p) return;
         setRestricciones(p.restricciones ?? []);
@@ -36,7 +36,7 @@ export default function PreferenciasScreen() {
     setGuardando(true);
     setMensaje(null);
     try {
-      await guardarPreferencias(usuario.id, {
+      await guardarPreferencias({
         restricciones,
         // Acepta "150.000" o "150000": se dejan solo los dígitos.
         presupuesto_semanal: Number(presupuesto.replace(/\D/g, "")) || 0,
